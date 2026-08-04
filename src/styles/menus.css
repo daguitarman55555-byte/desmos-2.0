@@ -1,0 +1,15 @@
+/* Popover menus: the colour tray, the settings wrench, the add-item menu, the keypad.
+ *
+ * All four are out of scope for milestone 1 — the buttons exist and do nothing, exactly as in the
+ * prototype. The shared popover shell lives here so those panels only have to bring their own
+ * contents when they arrive.
+ */
+
+.popover {
+  position: absolute; z-index: 20;
+  background: var(--c-surface);
+  border: var(--hairline) solid var(--c-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-toast);
+}
+.popover[hidden] { display: none; }

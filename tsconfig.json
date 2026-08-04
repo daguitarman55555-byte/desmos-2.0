@@ -18,7 +18,11 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+
+    // Declares the ?url / *.css side-effect import types Vite provides.
+    // tsconfig.core.json resets this to [] — core/ gets no bundler types either.
+    "types": ["vite/client"]
   },
   "include": ["src", "tests", "vite.config.ts", "vitest.config.ts"]
 }

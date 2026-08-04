@@ -1,0 +1,130 @@
+/* Expression rows, index cells, sliders, bounds editor, MathQuill overrides. */
+
+.expr-row {
+  display: flex; align-items: stretch;
+  min-height: var(--row-min-height);
+  position: relative; background: var(--c-surface);
+  border-top: var(--hairline) solid transparent;
+  border-bottom: var(--hairline) solid var(--c-border);
+  /* Pull rows together so adjacent borders overlap into a single hairline. */
+  margin-top: calc(-1 * var(--hairline));
+}
+.expr-row.focused {
+  border-top-color: var(--c-blue);
+  border-bottom-color: var(--c-blue);
+  z-index: 2;
+}
+
+.expr-index {
+  width: var(--index-width); flex: 0 0 var(--index-width);
+  background: var(--c-index-bg);
+  border-right: var(--hairline) solid var(--c-border);
+  position: relative; user-select: none; cursor: pointer;
+}
+.expr-row.focused .expr-index { background: var(--c-blue); border-right-color: var(--c-blue); }
+
+.idx-num {
+  position: absolute; left: var(--index-num-left); top: var(--index-num-top);
+  font-size: var(--fs-index); color: var(--c-index-num); line-height: 1;
+}
+.expr-row.focused .idx-num { color: var(--c-chrome-text); }
+
+.idx-icon {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: var(--index-icon-top);
+  width: var(--index-icon-size); height: var(--index-icon-size);
+  cursor: pointer; display: none;
+}
+.idx-icon.show { display: block; }
+
+.idx-icon2 {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: var(--index-icon2-top);
+  width: var(--index-icon2-size); height: var(--index-icon2-size);
+  cursor: pointer; display: none;
+}
+.idx-icon2.show { display: block; }
+
+.expr-body {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: var(--expr-body-pad);
+}
+.expr-math { min-height: var(--expr-math-min-height); display: flex; align-items: center; }
+
+.expr-del {
+  position: absolute; right: var(--expr-del-right); top: var(--expr-del-top);
+  width: var(--expr-del-size); height: var(--expr-del-size);
+  border: 0; background: none; cursor: pointer;
+  color: var(--c-delete); border-radius: var(--radius-sm);
+  display: none; align-items: center; justify-content: center;
+}
+.expr-del.show { display: flex; }
+.expr-del:hover { background: var(--c-hover); color: var(--c-text); }
+
+/* ---- slider ---- */
+.slider-row {
+  display: none; align-items: center; gap: var(--slider-gap);
+  margin-top: var(--slider-margin-top); padding-right: var(--slider-pad-right);
+}
+.slider-row.show { display: flex; }
+
+.sl-lim {
+  font-size: var(--fs-slider-limit); color: var(--c-slider-label);
+  min-width: var(--slider-limit-min-width); text-align: center;
+  user-select: none; cursor: pointer;
+}
+.sl-track { position: relative; flex: 1 1 auto; height: var(--slider-track-height); cursor: pointer; }
+.sl-track::before {
+  content: ''; position: absolute; left: 0; right: 0;
+  top: var(--slider-rail-top); height: var(--slider-rail-height);
+  background: var(--c-slider-track); border-radius: var(--slider-rail-radius);
+}
+.sl-tick {
+  position: absolute; top: var(--slider-tick-top);
+  width: var(--hairline); height: var(--slider-tick-height);
+  background: var(--c-slider-tick);
+}
+.sl-thumb {
+  position: absolute; top: var(--slider-thumb-top);
+  width: var(--slider-thumb-size); height: var(--slider-thumb-size);
+  margin-left: calc(-0.5 * var(--slider-thumb-size));
+  background: var(--c-blue); border-radius: 50%;
+  box-shadow: 0 0 0 var(--slider-halo-width) var(--c-slider-halo);
+}
+
+/* ---- bounds editor ---- */
+.bounds-row {
+  display: none; align-items: center; flex-wrap: wrap;
+  row-gap: var(--bounds-row-gap);
+  margin-top: var(--bounds-margin-top);
+  font-size: var(--fs-bounds); color: var(--c-text); min-width: 0;
+}
+.bounds-row.show { display: flex; }
+.bounds-row .bf {
+  width: var(--bounds-field-width);
+  border: 0; border-bottom: var(--hairline) solid var(--c-border-input);
+  outline: none; background: transparent;
+  font-family: var(--font-math); font-style: italic;
+  font-size: var(--fs-bounds); text-align: center;
+  padding: var(--bounds-field-pad);
+}
+.bounds-row .bsym {
+  font-family: var(--font-math); font-style: italic;
+  margin: var(--bounds-sym-margin);
+}
+.bounds-row .bstep {
+  margin-left: var(--bounds-step-margin-left);
+  font-size: var(--fs-bounds-step); font-style: normal; font-family: inherit;
+}
+.bounds-row .bstep .bf {
+  margin-left: var(--bounds-step-field-margin);
+  width: var(--bounds-step-field-width);
+}
+
+/* ===================== MATHQUILL OVERRIDES ===================== */
+.mq-editable-field, .mq-math-mode { border: 0 !important; }
+.mq-editable-field.mq-focused { box-shadow: none !important; border: 0 !important; outline: none !important; }
+.expr-math .mq-editable-field { font-size: var(--fs-math); width: 100%; }
+.expr-math .mq-root-block { padding: var(--mq-root-pad); }
+.mq-editable-field .mq-cursor { border-left: var(--hairline) solid var(--c-text); }

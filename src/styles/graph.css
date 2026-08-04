@@ -1,0 +1,63 @@
+/* Canvas, the DOM overlay above it, point labels, and the graph tool buttons. */
+
+#graph-wrap {
+  flex: 1 1 auto; position: relative; min-width: 0;
+  background: var(--c-surface); overflow: hidden;
+}
+#graph { display: block; width: 100%; height: 100%; }
+
+/* Labels live in the DOM rather than on the canvas so the text stays crisp at any device pixel
+ * ratio and can hold a real button. */
+#graph-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+
+.pt-label {
+  position: absolute; pointer-events: auto;
+  display: flex; align-items: center; gap: var(--label-gap);
+  background: var(--c-surface);
+  border: var(--hairline) solid var(--c-label-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-label);
+  padding: var(--label-pad); white-space: nowrap;
+  font-family: var(--font-math); font-style: italic;
+  font-size: var(--fs-label); color: var(--c-text);
+}
+.pt-export {
+  width: var(--label-export-size); height: var(--label-export-size);
+  flex: 0 0 var(--label-export-size); padding: 0;
+  border: 0; background: none; cursor: pointer; color: var(--c-icon-muted);
+}
+.pt-export:hover { color: var(--c-text); }
+
+#graph-tools {
+  position: absolute; right: var(--gtools-right); top: var(--gtools-top);
+  display: flex; flex-direction: column; gap: var(--gtools-gap); z-index: 4;
+}
+.gbtn {
+  width: var(--gbtn-size); height: var(--gbtn-size);
+  background: var(--c-surface);
+  border: var(--hairline) solid var(--c-border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--c-icon-muted);
+}
+.gbtn:hover { background: var(--c-hover-soft); }
+
+/* Zoom in / zoom out / home stack as one control with shared borders. */
+.zoom-group { display: flex; flex-direction: column; }
+.zoom-group .gbtn + .gbtn:not([hidden]) { border-top: 0; }
+.gbtn[hidden] { display: none; }
+
+/* ===================== DEV PERF OVERLAY ===================== */
+/* Instrument, do not guess. Hidden unless explicitly enabled. */
+#perf-overlay {
+  position: absolute; left: var(--keypad-left); top: var(--gtools-top);
+  z-index: 8; pointer-events: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.4px; line-height: 1.45;
+  color: #2f2f2f; background: rgba(255, 255, 255, 0.86);
+  border: var(--hairline) solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6.4px;
+  white-space: pre;
+}
+#perf-overlay[hidden] { display: none; }
+#perf-overlay .over { color: var(--c-expr-1); }

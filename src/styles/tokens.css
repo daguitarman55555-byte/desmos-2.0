@@ -1,0 +1,192 @@
+/* Every visual metric in the app. The one place to tune.
+ *
+ * No component file may hard-code a pixel value — if a new dimension is needed, it gets a token
+ * here first. That rule is what makes a scale change one edit rather than forty.
+ *
+ * The odd-looking numbers (44.8, 33.6, 9.6, 0.8) are not arbitrary: the prototype was matched
+ * against Desmos captures taken at a device pixel ratio of 1.25, so the css values are the
+ * device measurements divided by 1.25. 56/1.25 = 44.8. Rounding them to integers visibly shifts
+ * the layout, so they are kept exact.
+ *
+ * Theme is light only. The palette lives here as variables so a dark theme is a drop-in later
+ * rather than a rewrite.
+ */
+
+:root {
+  /* ── Palette ─────────────────────────────────────────────────────────── */
+  --c-blue: #2f72dc;
+  --c-blue-hover: #2b68c7;
+  --c-green: #3ec415;
+
+  --c-surface: #fff;
+  --c-text: #000;
+  --c-chrome-bg: #2f2f2f;
+  --c-chrome-text: #fff;
+  --c-chrome-divider: #6e6e6e;
+  --c-chrome-hover: rgba(255, 255, 255, 0.13);
+
+  --c-border: #cbcbcb;
+  --c-border-light: #dedede;
+  --c-border-input: #9a9a9a;
+  --c-index-bg: #f5f5f5;
+  --c-hover: #ededed;
+  --c-hover-soft: #f2f2f2;
+
+  --c-icon: #3b3b3b;
+  --c-icon-muted: #4d4d4d;
+  --c-icon-disabled: #b8b8b8;
+  --c-delete: #5e5e5e;
+  --c-index-num: #909090;
+  --c-slider-label: #666;
+  --c-slider-track: #dcdcdc;
+  --c-slider-tick: #bdbdbd;
+  --c-slider-halo: rgba(47, 114, 220, 0.2);
+
+  --c-save-bg: #4a4a4a;
+  --c-save-text: #a8a8a8;
+
+  --c-footer: #b6b6b6;
+  --c-footer-word: #c2c2c2;
+  --c-label-border: #c4c4c4;
+
+  /* Expression colour cycle — mirrored in state/document.ts, which is the source of truth. */
+  --c-expr-1: #c74440;
+  --c-expr-2: #2d70b3;
+  --c-expr-3: #388c46;
+  --c-expr-4: #6042a6;
+  --c-expr-5: #000000;
+  --c-expr-6: #fa7e19;
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-display: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-math: 'Times New Roman', Times, serif;
+
+  --fs-wordmark: 25.6px;
+  --fs-wordmark-narrow: 21.6px;
+  --fs-doc-title: 14.4px;
+  --fs-button: 12px;
+  --fs-math: 18.4px;
+  --fs-bounds: 15.2px;
+  --fs-bounds-step: 12.8px;
+  --fs-toast: 12.8px;
+  --fs-slider-limit: 11.2px;
+  --fs-index: 9.6px;
+  --fs-footer: 9.6px;
+  --fs-footer-word: 20.8px;
+  --fs-label: 16px;
+  --fs-tick: 11.2px;
+
+  /* ── Hairlines and radii ─────────────────────────────────────────────── */
+  --hairline: 0.8px;
+  --radius-sm: 2.4px;
+  --radius-md: 3.2px;
+  --radius-lg: 4px;
+
+  /* ── Header ──────────────────────────────────────────────────────────── */
+  --h-topbar: 44.8px;
+  --topbar-pad-x: 9.6px;
+  --hdr-icon-size: 33.6px;
+  --hdr-btn-height: 33.6px;
+  --hdr-btn-pad-x: 15px;
+  --doc-divider-h: 19.2px;
+  --doc-divider-margin: 0 11.2px 0 4.8px;
+  --save-height: 30.4px;
+  --save-pad-x: 16.8px;
+  --save-margin-left: 12.8px;
+  --wordmark-tracking: 0.96px;
+
+  /* ── Panel ───────────────────────────────────────────────────────────── */
+  --panel-width: 466.4px;
+  --panel-min-width: 192px;
+  --panel-max-width: 68%;
+  --h-panel-toolbar: 51.2px;
+  --panel-toolbar-pad: 0 9.6px 0 6.4px;
+  --tool-btn-size: 35.2px;
+  --scrollbar-width: 8px;
+  --resizer-width: 4px;
+  --resizer-offset: -2.4px;
+
+  /* ── Expression row ──────────────────────────────────────────────────── */
+  --row-min-height: 59.2px;
+  --index-width: 37.6px;
+  --index-num-left: 4px;
+  --index-num-top: 2.4px;
+  --index-icon-size: 24px;
+  --index-icon-top: 15.2px;
+  --index-icon2-size: 20.8px;
+  --index-icon2-top: 49.6px;
+  --expr-body-pad: 10.4px 32px 10.4px 9.6px;
+  --expr-math-min-height: 36.8px;
+  --expr-del-size: 24px;
+  --expr-del-right: 8px;
+  --expr-del-top: 19px;
+  --mq-root-pad: 1.6px 0;
+
+  /* ── Slider ──────────────────────────────────────────────────────────── */
+  --slider-gap: 8px;
+  --slider-margin-top: 8px;
+  --slider-pad-right: 6.4px;
+  --slider-limit-min-width: 20.8px;
+  --slider-track-height: 16px;
+  --slider-rail-top: 6.4px;
+  --slider-rail-height: 3.2px;
+  --slider-rail-radius: 1.6px;
+  --slider-tick-top: 4.8px;
+  --slider-tick-height: 6.4px;
+  --slider-thumb-size: 11.2px;
+  --slider-thumb-top: 2.4px;
+  --slider-halo-width: 4px;
+
+  /* ── Bounds editor ───────────────────────────────────────────────────── */
+  --bounds-margin-top: 9.6px;
+  --bounds-row-gap: 4.8px;
+  --bounds-field-width: 36.8px;
+  --bounds-field-pad: 0 1.6px 1.6px;
+  --bounds-sym-margin: 0 6.4px;
+  --bounds-step-margin-left: 20.8px;
+  --bounds-step-field-width: 49.6px;
+  --bounds-step-field-margin: 6.4px;
+
+  /* ── Panel furniture ─────────────────────────────────────────────────── */
+  --footer-bottom: 8px;
+  --footer-tracking: 0.16px;
+  --footer-word-tracking: 0.48px;
+  --footer-word-margin-top: 1.6px;
+  --keypad-left: 9.6px;
+  --keypad-bottom: 9.6px;
+  --keypad-width: 68px;
+  --keypad-height: 38.4px;
+  --keypad-gap: 5.6px;
+  --toast-bottom: 52.8px;
+  --toast-width: 269.6px;
+  --toast-inset: 19.2px;
+  --toast-pad: 8.4px 27.2px 8.4px 11.2px;
+  --toast-gap: 10.4px;
+  --toast-close-right: 5.6px;
+  --toast-close-pad: 3.2px;
+
+  /* ── Graph ───────────────────────────────────────────────────────────── */
+  --gtools-right: 4px;
+  --gtools-top: 7px;
+  --gtools-gap: 7.2px;
+  --gbtn-size: 35.2px;
+  --label-gap: 6.4px;
+  --label-pad: 3.2px 6.4px;
+  --label-export-size: 13.6px;
+  --label-offset-x: 14px;
+  --label-offset-y: -14px;
+
+  /* ── Shadows ─────────────────────────────────────────────────────────── */
+  --shadow-keypad: 0 0.8px 1.6px rgba(0, 0, 0, 0.07);
+  --shadow-toast: 0 1.6px 4px rgba(0, 0, 0, 0.13);
+  --shadow-label: 0 1.6px 4px rgba(0, 0, 0, 0.17);
+
+  /* ── Breakpoints are declared here for reference; media queries cannot use variables. ──
+   * 1080px  wordmark shrinks
+   *  900px  wordmark hidden
+   *  760px  log-in hidden, document title truncates at 104px
+   *  620px  sign-up hidden, panel may fill the width
+   *  560px height  footer and toast hidden
+   */
+}

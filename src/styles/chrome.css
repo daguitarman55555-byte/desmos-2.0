@@ -1,0 +1,204 @@
+/* Header bar, expression panel shell, toolbar, panel furniture. */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--c-surface);
+  color: var(--c-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The mount point must carry the full height too, or #app's height:100% resolves against an
+ * auto-height parent and the whole layout collapses to its content height. The prototype had
+ * #app as a direct child of <body> and did not need this. */
+#app-root { height: 100%; }
+#app { display: flex; flex-direction: column; height: 100%; }
+
+/* ===================== HEADER ===================== */
+#topbar {
+  height: var(--h-topbar);
+  flex: 0 0 var(--h-topbar);
+  background: var(--c-chrome-bg);
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 30;
+  user-select: none;
+}
+#topbar .left {
+  display: flex; align-items: center;
+  padding-left: var(--topbar-pad-x);
+  min-width: 0; flex: 0 1 auto;
+}
+#topbar .right {
+  display: flex; align-items: center;
+  margin-left: auto;
+  padding-right: var(--topbar-pad-x);
+  flex: 0 0 auto;
+}
+
+.hdr-icon-btn {
+  width: var(--hdr-icon-size); height: var(--hdr-icon-size);
+  border: 0; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.hdr-icon-btn:hover { background: var(--c-chrome-hover); }
+
+#doc-divider {
+  width: var(--hairline); height: var(--doc-divider-h);
+  background: var(--c-chrome-divider);
+  margin: var(--doc-divider-margin);
+}
+
+#doc-title {
+  color: var(--c-chrome-text);
+  font-size: var(--fs-doc-title);
+  font-weight: 400;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+
+#save-btn {
+  margin-left: var(--save-margin-left);
+  height: var(--save-height);
+  padding: 0 var(--save-pad-x);
+  border: 0; border-radius: var(--radius-sm);
+  font-size: var(--fs-button); font-family: inherit;
+  background: var(--c-save-bg); color: var(--c-save-text); cursor: default;
+  transition: background 0.12s, color 0.12s;
+}
+#save-btn.dirty { background: var(--c-blue); color: var(--c-chrome-text); cursor: pointer; }
+#save-btn.dirty:hover { background: var(--c-blue-hover); }
+
+#wordmark {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  color: var(--c-chrome-text);
+  font-size: var(--fs-wordmark);
+  line-height: 1; pointer-events: none;
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: var(--wordmark-tracking);
+}
+
+.hdr-btn {
+  height: var(--hdr-btn-height);
+  padding: 0 var(--hdr-btn-pad-x);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-button); font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+}
+#login-btn {
+  background: transparent; color: var(--c-chrome-text);
+  border: var(--hairline) solid var(--c-border-input);
+  margin-right: var(--slider-gap);
+}
+#login-btn:hover { background: rgba(255, 255, 255, 0.1); }
+#signup-btn {
+  background: var(--c-blue); color: var(--c-chrome-text);
+  border: var(--hairline) solid var(--c-blue);
+  margin-right: var(--slider-gap);
+}
+#signup-btn:hover { background: var(--c-blue-hover); }
+
+/* ===================== BODY ===================== */
+#body { flex: 1 1 auto; display: flex; min-height: 0; }
+
+/* ===================== PANEL ===================== */
+#panel {
+  width: var(--panel-width); flex: 0 0 auto;
+  max-width: var(--panel-max-width); min-width: var(--panel-min-width);
+  background: var(--c-surface);
+  display: flex; flex-direction: column;
+  position: relative;
+  border-right: var(--hairline) solid var(--c-border);
+}
+#panel.collapsed { width: 0; min-width: 0; border-right: 0; overflow: hidden; }
+#panel.collapsed + #resizer { display: none; }
+
+#panel-toolbar {
+  height: var(--h-panel-toolbar); flex: 0 0 var(--h-panel-toolbar);
+  display: flex; align-items: center;
+  padding: var(--panel-toolbar-pad);
+  border-bottom: var(--hairline) solid var(--c-border);
+  background: var(--c-surface);
+}
+.tool-btn {
+  width: var(--tool-btn-size); height: var(--tool-btn-size);
+  border: 0; background: none; cursor: pointer; color: var(--c-icon);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm);
+  flex: 0 0 var(--tool-btn-size);
+}
+.tool-btn:hover { background: var(--c-hover); }
+.tool-btn:disabled { color: var(--c-icon-disabled); cursor: default; }
+.tool-btn:disabled:hover { background: none; }
+.tb-gap { flex: 1 1 auto; }
+
+#expr-list { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+#expr-list::-webkit-scrollbar { width: var(--scrollbar-width); }
+#expr-list::-webkit-scrollbar-thumb { background: #cacaca; border-radius: var(--radius-lg); }
+
+/* ===================== PANEL FURNITURE ===================== */
+#panel-footer {
+  position: absolute; bottom: var(--footer-bottom); left: 0; right: 0;
+  text-align: center; pointer-events: none;
+  font-size: var(--fs-footer); color: var(--c-footer);
+  letter-spacing: var(--footer-tracking);
+}
+#panel-footer .pb-word {
+  display: block; font-family: var(--font-display); font-weight: 300;
+  font-size: var(--fs-footer-word); color: var(--c-footer-word);
+  line-height: 1.05;
+  margin-top: var(--footer-word-margin-top);
+  letter-spacing: var(--footer-word-tracking);
+}
+
+#keypad-btn {
+  position: absolute; left: var(--keypad-left); bottom: var(--keypad-bottom);
+  width: var(--keypad-width); height: var(--keypad-height);
+  background: var(--c-surface);
+  border: var(--hairline) solid var(--c-border);
+  border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center; gap: var(--keypad-gap);
+  cursor: pointer; box-shadow: var(--shadow-keypad); z-index: 6;
+}
+#keypad-btn:hover { background: #f6f6f6; }
+
+#login-toast {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: var(--toast-bottom);
+  width: var(--toast-width); max-width: calc(100% - var(--toast-inset));
+  background: var(--c-surface);
+  border: var(--hairline) solid var(--c-border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-toast);
+  padding: var(--toast-pad);
+  display: flex; align-items: center; gap: var(--toast-gap); z-index: 5;
+}
+#login-toast .toast-text { font-size: var(--fs-toast); line-height: 1.38; }
+#login-toast a { color: var(--c-blue); text-decoration: underline; cursor: pointer; }
+#toast-close {
+  position: absolute; right: var(--toast-close-right); top: 50%; transform: translateY(-50%);
+  border: 0; background: none; cursor: pointer; color: #4a4a4a;
+  padding: var(--toast-close-pad); display: flex;
+}
+
+#resizer {
+  width: var(--resizer-width); flex: 0 0 var(--resizer-width);
+  margin-left: var(--resizer-offset); cursor: col-resize; z-index: 10;
+}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 1080px) { #wordmark { font-size: var(--fs-wordmark-narrow); } }
+@media (max-width: 900px)  { #wordmark { display: none; } }
+@media (max-width: 760px)  {
+  #login-btn { display: none; }
+  #doc-title { max-width: 104px; }
+}
+@media (max-width: 620px)  {
+  #signup-btn { display: none; }
+  #panel { max-width: 100%; }
+}
+@media (max-height: 560px) { #panel-footer, #login-toast { display: none; } }
