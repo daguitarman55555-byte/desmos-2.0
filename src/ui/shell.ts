@@ -86,6 +86,7 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
     onZoomIn: callbacks.onZoomIn,
     onZoomOut: callbacks.onZoomOut,
     onHome: callbacks.onHome,
+    onWrench: callbacks.onWrench,
   });
   body.appendChild(graph.element);
 

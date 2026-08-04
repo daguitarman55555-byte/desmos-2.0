@@ -52,7 +52,7 @@ export function deserialise(json: string): GraphDocument {
   return {
     title: raw.title ?? 'Untitled Graph',
     expressions,
-    views: raw.views ?? [{ cx: 0, cy: 0, ppu: 58 }],
+    views: raw.views ?? [{ cx: 0, cy: 0, ppuX: 58, ppuY: 58 }],
     settings: { ...DEFAULT_SETTINGS, ...(raw.settings ?? {}) },
   };
 }

@@ -1,7 +1,7 @@
 // Mutations and change notification.
 
-import { COLOURS, createExpression, isBlank } from './document.ts';
-import type { Expression } from './document.ts';
+import { COLOURS, DEFAULT_SETTINGS, createExpression, isBlank } from './document.ts';
+import type { Expression, GraphSettings } from './document.ts';
 import { GRAPHED_KINDS, analyze } from '../core/lang/analyze.ts';
 import type { Analysis } from '../core/lang/analyze.ts';
 import { createScope } from '../core/lang/scope.ts';
@@ -12,6 +12,9 @@ export class Store {
   expressions: Expression[] = [];
   readonly scope = createScope();
   readonly analyses = new Map<number, Analysis>();
+
+  /** Everything behind the wrench. */
+  settings: GraphSettings = DEFAULT_SETTINGS;
 
   /** Position in the colour cycle. Never decremented — deleting a row does not free its colour. */
   private colourIndex = 0;
@@ -133,6 +136,18 @@ export class Store {
     e.latex = `${analysis?.sliderLabel || 'a'}=${value}`;
     this.markDirty();
     this.recompute();
+  }
+
+  /**
+   * Apply a settings change.
+   *
+   * Angle mode is mirrored onto the scope because that is where the evaluator reads it, and it
+   * is read per call — so this takes effect on the next redraw with nothing recompiled.
+   */
+  patchSettings(patch: Partial<GraphSettings>): void {
+    this.settings = { ...this.settings, ...patch };
+    this.scope.angleMode = this.settings.angleMode;
+    this.markDirty();
   }
 
   reset(expressions: Expression[]): void {

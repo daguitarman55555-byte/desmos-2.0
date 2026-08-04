@@ -37,6 +37,23 @@ export const BUILTINS: Readonly<Record<BuiltinName, BuiltinImpl>> = {
   mod: (a, b) => ((a % b) + b) % b,
 };
 
+export const DEGREES_TO_RADIANS = Math.PI / 180;
+
+/**
+ * Functions whose *argument* is an angle, and whose input is therefore scaled in degree mode.
+ *
+ * The hyperbolics are deliberately absent: `sinh` takes a real number, not an angle, and
+ * converting it would be wrong. Desmos leaves them alone too.
+ */
+const ANGLE_INPUT: ReadonlySet<BuiltinName> = new Set<BuiltinName>([
+  'sin', 'cos', 'tan', 'sec', 'csc', 'cot',
+]);
+
+/** Functions whose *result* is an angle, and whose output is therefore scaled in degree mode. */
+const ANGLE_OUTPUT: ReadonlySet<BuiltinName> = new Set<BuiltinName>([
+  'asin', 'acos', 'atan', 'arcsin', 'arccos', 'arctan',
+]);
+
 function compileNode(node: Node): Compiled {
   switch (node.type) {
     case 'number': {
@@ -90,8 +107,19 @@ function compileNode(node: Node): Compiled {
       // worth a specialised closure.
       if (args.length === 1) {
         const only = args[0] as Compiled;
+        // Degree mode converts at the boundary of the angle functions rather than replacing
+        // them, so the underlying implementation stays the host's. The mode is read from the
+        // scope per call, so switching it redraws correctly without recompiling.
+        if (ANGLE_INPUT.has(node.name)) {
+          return (f, s) => impl(asScalar(only(f, s)) * (s.angleMode === 'degrees' ? DEGREES_TO_RADIANS : 1));
+        }
+        if (ANGLE_OUTPUT.has(node.name)) {
+          return (f, s) => impl(asScalar(only(f, s))) / (s.angleMode === 'degrees' ? DEGREES_TO_RADIANS : 1);
+        }
         return (f, s) => impl(asScalar(only(f, s)));
       }
+      // No multi-argument builtin takes or returns an angle, so the general path needs no
+      // conversion. Revisit if a two-argument atan is ever added.
       return (f, s) => impl(...args.map((g) => asScalar(g(f, s))));
     }
 

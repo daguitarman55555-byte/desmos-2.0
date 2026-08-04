@@ -94,3 +94,25 @@ describe('isMajorLine', () => {
     expect(isMajorLine(4 * minor, major)).toBe(true);
   });
 });
+
+describe('pinned step from the settings panel', () => {
+  it('bypasses the 1-2-5 selection entirely', () => {
+    expect(gridSteps(50, 2.5)).toEqual({ major: 2.5, minor: 0.625 });
+    expect(gridSteps(1234, 7)).toEqual({ major: 7, minor: 1.75 });
+  });
+
+  it('still quarters the minor grid', () => {
+    const { major, minor } = gridSteps(50, 3);
+    expect(minor).toBeCloseTo(major / 4, 12);
+  });
+
+  it('falls back to automatic selection for a null, zero or negative step', () => {
+    const auto = gridSteps(50);
+    expect(gridSteps(50, null)).toEqual(auto);
+    expect(gridSteps(50, 0)).toEqual(auto);
+    expect(gridSteps(50, -2)).toEqual(auto);
+    // A non-finite step would otherwise produce an unterminated tick loop.
+    expect(gridSteps(50, Number.NaN)).toEqual(auto);
+    expect(gridSteps(50, Number.POSITIVE_INFINITY)).toEqual(auto);
+  });
+});

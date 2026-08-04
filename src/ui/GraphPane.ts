@@ -13,6 +13,7 @@ export interface GraphPaneCallbacks {
   onZoomIn(): void;
   onZoomOut(): void;
   onHome(): void;
+  onWrench(): void;
 }
 
 export interface GraphPane {
@@ -22,6 +23,8 @@ export interface GraphPane {
   readonly labels: PointLabelLayer;
   /** The home button only exists once the view has left the default framing. */
   setHomeVisible(visible: boolean): void;
+  /** Popovers anchored inside the pane, such as the settings panel. */
+  mountOverlay(el: HTMLElement): void;
   showPerf(visible: boolean): void;
   updatePerf(timings: FrameTimings, recomputeMs: number): void;
 }
@@ -57,6 +60,7 @@ export function createGraphPane(callbacks: GraphPaneCallbacks): GraphPane {
   (tools.querySelector('#zoom-in') as HTMLButtonElement).onclick = callbacks.onZoomIn;
   (tools.querySelector('#zoom-out') as HTMLButtonElement).onclick = callbacks.onZoomOut;
   home.onclick = callbacks.onHome;
+  (tools.querySelector('#wrench-btn') as HTMLButtonElement).onclick = callbacks.onWrench;
 
   const context = canvas.getContext('2d');
   if (!context) throw new Error('2D canvas context unavailable');
@@ -69,6 +73,10 @@ export function createGraphPane(callbacks: GraphPaneCallbacks): GraphPane {
 
     setHomeVisible(visible) {
       home.hidden = !visible;
+    },
+
+    mountOverlay(el) {
+      element.appendChild(el);
     },
 
     showPerf(visible) {

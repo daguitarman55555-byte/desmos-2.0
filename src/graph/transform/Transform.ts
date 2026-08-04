@@ -12,8 +12,12 @@ export interface ViewportState {
   /** Centre of the view, in maths coordinates. */
   readonly cx: number;
   readonly cy: number;
-  /** Scale: css pixels per maths unit. */
-  readonly ppu: number;
+  /**
+   * Scale, in css pixels per maths unit. Separate per axis because Desmos lets the two ranges
+   * be set independently from the settings panel, which makes the axes non-square.
+   */
+  readonly ppuX: number;
+  readonly ppuY: number;
   /** Size of the drawing surface, in css pixels. */
   readonly width: number;
   readonly height: number;

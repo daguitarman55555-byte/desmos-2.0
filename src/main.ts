@@ -26,6 +26,7 @@ import { createExpressionList } from './ui/ExpressionList.ts';
 import type { RowCallbacks } from './ui/ExpressionRow.ts';
 import { LEFT, initMathQuill } from './ui/MathField.ts';
 import { labelItems } from './ui/PointLabel.ts';
+import { createSettingsPanel } from './ui/SettingsPanel.ts';
 import { createShell } from './ui/shell.ts';
 
 /** Movement in pixels below which a press counts as a click rather than a drag. */
@@ -59,7 +60,26 @@ async function boot(): Promise<void> {
     onZoomIn: () => { view.zoomBy(ZOOM_STEP); draw(); },
     onZoomOut: () => { view.zoomBy(1 / ZOOM_STEP); draw(); },
     onHome: () => { view.resetToDefault(); draw(); },
+    onWrench: () => { settingsPanel.toggle(); syncSettingsPanel(); },
   });
+
+  const settingsPanel = createSettingsPanel({
+    onChange: (patch) => {
+      store.patchSettings(patch);
+      shell.header.setDirty(store.dirty);
+      draw();
+    },
+    onBoundsChange: (patch) => {
+      view.setBounds(patch);
+      draw();
+    },
+  });
+  shell.graph.mountOverlay(settingsPanel.element);
+
+  const syncSettingsPanel = (): void => {
+    if (!settingsPanel.isOpen) return;
+    settingsPanel.update({ ...store.settings }, view.boundsObject());
+  };
 
   const renderer = new Renderer(shell.graph.context, view, store.scope);
   shell.graph.showPerf(showPerf);
@@ -145,9 +165,11 @@ async function boot(): Promise<void> {
       pois,
       pins: selection.pins,
       hover: selection.hover,
+      axes: store.settings,
     };
 
     const timings: FrameTimings = renderer.render(scene);
+    syncSettingsPanel();
 
     shell.graph.labels.render(
       labelItems(selection.pins, selection.hover),
@@ -357,6 +379,7 @@ async function boot(): Promise<void> {
       pois,
       pins: selection.pins,
       hover: selection.hover,
+      axes: store.settings,
     };
   }
 
@@ -454,7 +477,19 @@ async function boot(): Promise<void> {
     draw();
   });
 
+  // Clicking away closes the panel, but clicking inside it must not.
+  document.addEventListener('mousedown', (ev) => {
+    if (!settingsPanel.isOpen) return;
+    const target = ev.target as HTMLElement;
+    if (settingsPanel.element.contains(target) || target.closest('#wrench-btn')) return;
+    settingsPanel.close();
+  });
+
   document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && settingsPanel.isOpen) {
+      settingsPanel.close();
+      return;
+    }
     if (!(ev.ctrlKey || ev.metaKey)) return;
     const key = ev.key.toLowerCase();
     if (key === 'z' && !ev.shiftKey) {

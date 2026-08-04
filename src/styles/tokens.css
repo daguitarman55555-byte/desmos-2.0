@@ -13,7 +13,8 @@
  * the values below were each confirmed in a clean profile. Where the frozen prototype and live
  * Desmos disagree, live Desmos now wins, which means reference/desmos-demo.html is no longer
  * the pixel baseline. Retuned so far: --h-topbar, --c-chrome-bg, --fs-math, --row-min-height,
- * --expr-math-min-height, --panel-width.
+ * --expr-math-min-height, --panel-width;
+ * plus the settings-panel block below.
  *
  * Theme is light only. The palette lives here as variables so a dark theme is a drop-in later
  * rather than a rewrite.
@@ -179,11 +180,28 @@
   --toast-close-right: 5.6px;
   --toast-close-pad: 3.2px;
 
+  /* ── Settings panel (the wrench) ──────────────────────────────────────
+   * Measured on live desmos.com in an extension-free browser. */
+  --settings-width: 290px;
+  --settings-pad: 12px 14px;
+  --settings-gap: 10px;
+  --fs-settings: 16px;
+  --fs-settings-label: 13.6px;
+  --segmented-btn-w: 135.5px;
+  --segmented-btn-h: 36px;
+  --settings-checkbox: 17.6px;
+  --settings-checkbox-sm: 15px;
+  --settings-axis-input-w: 121.5px;
+  --settings-axis-input-h: 31px;
+  --settings-section-gap: 16px;
+
   /* ── Graph ───────────────────────────────────────────────────────────── */
-  --gtools-right: 4px;
-  --gtools-top: 7px;
+  /* Measured: the pillbox sits 5px from the top and right of the graph pane, and each
+   * button is 37px (Desmos's interior buttons are 35 inside a 1px-bordered 37px shell). */
+  --gtools-right: 5px;
+  --gtools-top: 5px;
   --gtools-gap: 7.2px;
-  --gbtn-size: 35.2px;
+  --gbtn-size: 37px;
   --label-gap: 6.4px;
   --label-pad: 3.2px 6.4px;
   --label-export-size: 13.6px;

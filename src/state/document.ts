@@ -34,21 +34,51 @@ export interface Expression {
 export interface GraphView {
   readonly cx: number;
   readonly cy: number;
-  readonly ppu: number;
+  readonly ppuX: number;
+  readonly ppuY: number;
 }
 
-export type AngleMode = 'radians' | 'degrees';
+// Angle mode is defined in core because the evaluator is what acts on it; state re-exports it
+// so document code does not have to reach past its own layer for a type it persists.
+export type { AngleMode } from '../core/lang/scope.ts';
+import type { AngleMode } from '../core/lang/scope.ts';
 
+/**
+ * Everything behind the wrench.
+ *
+ * Axis minimum and maximum are deliberately *not* here: in Desmos those fields drive the
+ * viewport directly, and the viewport is already the single owner of pan and zoom. Duplicating
+ * them into settings would create two sources of truth for the same numbers.
+ */
 export interface GraphSettings {
   /** Radians by default and persisted per document; degrees available, never default. */
   readonly angleMode: AngleMode;
   /** Exact where possible (1/3 stays 1/3), with a toggle for decimals. */
   readonly exactNumerics: boolean;
+
+  readonly showGrid: boolean;
+  readonly showMinorGridlines: boolean;
+  readonly showAxisNumbers: boolean;
+  readonly showArrows: boolean;
+
+  readonly xAxisLabel: string;
+  readonly yAxisLabel: string;
+  /** null means the automatic 1-2-5 selection; a number pins the labelled step. */
+  readonly xAxisStep: number | null;
+  readonly yAxisStep: number | null;
 }
 
 export const DEFAULT_SETTINGS: GraphSettings = {
   angleMode: 'radians',
   exactNumerics: true,
+  showGrid: true,
+  showMinorGridlines: true,
+  showAxisNumbers: true,
+  showArrows: false,
+  xAxisLabel: '',
+  yAxisLabel: '',
+  xAxisStep: null,
+  yAxisStep: null,
 };
 
 export interface GraphDocument {

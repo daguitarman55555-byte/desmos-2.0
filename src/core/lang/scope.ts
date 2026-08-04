@@ -12,14 +12,27 @@ export interface UserFunction {
   readonly body: Compiled;
 }
 
+/** Radians by default and persisted per document. Degrees available, never default. */
+export type AngleMode = 'radians' | 'degrees';
+
 export interface Scope {
   /** Single-letter names bound by `a = 5`. */
   readonly vars: Map<string, number>;
   /** Single-letter names bound by `f(x) = ...`. */
   readonly funcs: Map<string, UserFunction>;
+  /**
+   * Deliberately mutable, and deliberately read at call time rather than captured at compile
+   * time. Flipping the mode has to change every curve on the next redraw without recompiling
+   * anything — same late-binding argument as `lookupFunction` below.
+   */
+  angleMode: AngleMode;
 }
 
-export const createScope = (): Scope => ({ vars: new Map(), funcs: new Map() });
+export const createScope = (): Scope => ({
+  vars: new Map(),
+  funcs: new Map(),
+  angleMode: 'radians',
+});
 
 /**
  * Resolve a name against a frame, then the scope, then give up.

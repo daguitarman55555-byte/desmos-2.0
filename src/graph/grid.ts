@@ -24,7 +24,12 @@ export interface GridSteps {
  * The thresholds sit at the geometric-ish midpoints of the 1-2-5 sequence, so the step switches
  * where the error either side is comparable rather than at round numbers.
  */
-export function gridSteps(pixelsPerUnit: number): GridSteps {
+export function gridSteps(pixelsPerUnit: number, override: number | null = null): GridSteps {
+  // A pinned step from the settings panel bypasses the 1-2-5 selection entirely. Non-finite or
+  // non-positive values are ignored rather than allowed to produce an infinite tick loop.
+  if (override !== null && isFinite(override) && override > 0) {
+    return { major: override, minor: override / MINOR_SUBDIVISIONS };
+  }
   const raw = GRID_TARGET_PX / pixelsPerUnit;
   const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
   const normalised = raw / magnitude;

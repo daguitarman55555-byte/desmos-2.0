@@ -11,19 +11,19 @@ export const cartesian: Transform = {
 
   forward(view: ViewportState, x: number, y: number): Point {
     return [
-      (x - view.cx) * view.ppu + view.width / 2,
-      view.height / 2 - (y - view.cy) * view.ppu,
+      (x - view.cx) * view.ppuX + view.width / 2,
+      view.height / 2 - (y - view.cy) * view.ppuY,
     ];
   },
 
   inverse(view: ViewportState, px: number, py: number): Point {
     return [
-      (px - view.width / 2) / view.ppu + view.cx,
-      (view.height / 2 - py) / view.ppu + view.cy,
+      (px - view.width / 2) / view.ppuX + view.cx,
+      (view.height / 2 - py) / view.ppuY + view.cy,
     ];
   },
 
   jacobian(view: ViewportState): Jacobian {
-    return [view.ppu, 0, 0, -view.ppu];
+    return [view.ppuX, 0, 0, -view.ppuY];
   },
 };

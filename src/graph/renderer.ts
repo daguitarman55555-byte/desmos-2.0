@@ -4,7 +4,8 @@
 // caller adapts document state into `Drawable`s, which is what keeps the dependency arrow
 // pointing the right way.
 
-import { drawAxisLines, drawGrid, drawTickLabels } from './axes.ts';
+import { DEFAULT_AXIS_OPTIONS, drawAxisLines, drawGrid, drawTickLabels } from './axes.ts';
+import type { AxisOptions } from './axes.ts';
 import { plotExplicit } from './plotters/explicit.ts';
 import type { Polyline } from './plotters/explicit.ts';
 import { plotImplicit } from './plotters/implicit.ts';
@@ -39,6 +40,8 @@ export interface Scene {
   readonly pois: readonly POI[];
   readonly pins: readonly POI[];
   readonly hover: POI | null;
+  /** What the wrench controls. Omitted means Desmos's defaults. */
+  readonly axes?: AxisOptions;
 }
 
 export interface FrameTimings {
@@ -76,9 +79,10 @@ export class Renderer {
     const drawStart = performance.now();
     ctx.fillStyle = BACKGROUND;
     ctx.fillRect(0, 0, view.width, view.height);
-    drawGrid(ctx, view);
-    drawAxisLines(ctx, view);
-    drawTickLabels(ctx, view);
+    const axes = scene.axes ?? DEFAULT_AXIS_OPTIONS;
+    drawGrid(ctx, view, axes);
+    drawAxisLines(ctx, view, axes);
+    drawTickLabels(ctx, view, axes);
     let drawMs = performance.now() - drawStart;
 
     let plotMs = 0;

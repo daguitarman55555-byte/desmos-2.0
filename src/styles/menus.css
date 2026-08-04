@@ -1,8 +1,6 @@
-/* Popover menus: the colour tray, the settings wrench, the add-item menu, the keypad.
+/* Popover menus: the settings wrench, and later the colour tray, add-item menu and keypad.
  *
- * All four are out of scope for milestone 1 — the buttons exist and do nothing, exactly as in the
- * prototype. The shared popover shell lives here so those panels only have to bring their own
- * contents when they arrive.
+ * The shared popover shell lives here so those panels only have to bring their own contents.
  */
 
 .popover {
@@ -13,3 +11,82 @@
   box-shadow: var(--shadow-toast);
 }
 .popover[hidden] { display: none; }
+
+/* ===================== SETTINGS PANEL (the wrench) ===================== */
+
+.set-panel {
+  /* Anchored to the left of the wrench, top-aligned with it, as Desmos does. */
+  top: var(--gtools-top);
+  right: calc(var(--gtools-right) + var(--gbtn-size) + var(--gtools-gap));
+  width: var(--settings-width);
+  padding: var(--settings-pad);
+  font-size: var(--fs-settings-label);
+  color: var(--c-text);
+  display: flex; flex-direction: column; gap: var(--settings-section-gap);
+  max-height: calc(100% - 2 * var(--gtools-top));
+  overflow-y: auto;
+}
+
+.set-heading {
+  font-size: var(--fs-settings-label);
+  font-weight: 700;
+  margin-bottom: calc(var(--settings-gap) / 2);
+}
+
+/* Grid toggles sit in two columns, matching Desmos. */
+.set-grid-group { display: flex; gap: var(--settings-gap); }
+.set-grid-group > div { display: flex; flex-direction: column; gap: calc(var(--settings-gap) / 2); flex: 1 1 0; }
+
+.set-check {
+  display: flex; align-items: center; gap: var(--label-gap);
+  cursor: pointer; user-select: none;
+}
+.set-check input {
+  width: var(--settings-checkbox); height: var(--settings-checkbox);
+  margin: 0; accent-color: var(--c-blue); cursor: pointer; flex: 0 0 auto;
+}
+.set-check-sm input { width: var(--settings-checkbox-sm); height: var(--settings-checkbox-sm); }
+.set-check input:disabled { cursor: default; }
+.set-check:has(input:disabled) { color: var(--c-icon-disabled); cursor: default; }
+
+.set-axis { display: flex; flex-direction: column; gap: calc(var(--settings-gap) / 2); }
+
+.set-row { display: flex; align-items: center; gap: var(--label-gap); }
+.set-row-label { flex: 0 0 auto; color: var(--c-slider-label); }
+
+.set-field {
+  height: var(--settings-axis-input-h);
+  border: var(--hairline) solid var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--label-gap);
+  font-family: inherit; font-size: var(--fs-settings-label);
+  outline: none; background: var(--c-surface); min-width: 0;
+}
+.set-field:focus { border-color: var(--c-blue); }
+.set-axis-label { width: var(--settings-axis-input-w); margin-left: auto; }
+.set-step { width: var(--settings-axis-input-w); margin-left: auto; }
+
+.set-range .set-field { flex: 1 1 0; text-align: center; }
+.set-sym {
+  flex: 0 0 auto; font-family: var(--font-math);
+  font-size: var(--fs-settings); white-space: nowrap;
+}
+.set-sym i { font-style: italic; margin: 0 2px; }
+
+/* Two-option segmented control, as Desmos uses for angle mode. */
+.set-segmented { display: flex; }
+.set-seg-btn {
+  flex: 1 1 0;
+  height: var(--segmented-btn-h);
+  border: var(--hairline) solid var(--c-border);
+  background: var(--c-surface);
+  font-family: inherit; font-size: var(--fs-settings-label);
+  color: var(--c-icon); cursor: pointer;
+}
+.set-seg-btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.set-seg-btn:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: 0; }
+.set-seg-btn:hover { background: var(--c-hover); }
+.set-seg-btn.selected {
+  background: var(--c-blue); border-color: var(--c-blue); color: var(--c-chrome-text);
+}
+.set-seg-btn.selected:hover { background: var(--c-blue-hover); }
