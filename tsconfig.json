@@ -13,6 +13,9 @@
 
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
+    // Imports carry their .ts extension so a path means one file with no resolution guesswork.
+    // Safe because we only ever typecheck — Vite does the emitting.
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true

@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# The frozen baseline. Byte-for-byte, forever — no line-ending normalisation.
+reference/** -text
