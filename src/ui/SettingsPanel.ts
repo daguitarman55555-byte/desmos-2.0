@@ -1,8 +1,8 @@
 // The wrench.
 //
-// Built against live desmos.com measured in an extension-free browser: a 290px popover anchored
-// to the left of the wrench button, 16px base font, 135.5x36 segmented-control buttons and
-// 17.6px checkboxes.
+// Structure and every metric measured on live desmos.com in an extension-free browser: a 290px
+// popover with a uniform 10px inset, sections fenced by a hairline rule, a two-column grid
+// block, and per-axis rows of [minimum] <=x<= [maximum] [Step].
 //
 // Deliberately NOT reproduced, because each needs an engine feature that does not exist yet
 // rather than a control that does nothing:
@@ -11,9 +11,10 @@
 //     already lives in tokens.css, so a theme is a drop-in; these wait for it.
 //   Complex Mode — needs core/numeric/complex.ts wired through the evaluator (UPGRADES P1).
 //   More Options — its contents are the above.
+//   The grid-style icon row inside the Grid block — belongs with the expression colour and
+//     line-style icons, which are a separate piece of work.
 //
-// Everything here is live: each control drives something the renderer or the evaluator actually
-// honours.
+// Everything present is live: each control drives something the renderer or evaluator honours.
 
 import type { AngleMode } from '../core/lang/scope.ts';
 import type { AxisOptions } from '../graph/axes.ts';
@@ -45,7 +46,14 @@ export interface SettingsPanel {
   update(values: SettingsValues, bounds: Bounds): void;
 }
 
-/** A labelled checkbox row. */
+function section(...children: readonly HTMLElement[]): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'set-section';
+  el.append(...children);
+  return el;
+}
+
+/** A labelled checkbox. Small is Desmos's nested variant, used for the grid sub-options. */
 function checkbox(
   label: string,
   small: boolean,
@@ -62,40 +70,12 @@ function checkbox(
   return { row, input };
 }
 
-/** A two-option segmented control, as Desmos uses for angle mode and display size. */
-function segmented<T extends string>(
-  options: readonly [T, T],
-  labels: readonly [string, string],
-  onChange: (value: T) => void,
-): { row: HTMLElement; select: (value: T) => void } {
-  const row = document.createElement('div');
-  row.className = 'set-segmented';
-  const buttons = options.map((value, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'set-seg-btn';
-    b.textContent = labels[i] as string;
-    b.addEventListener('click', () => onChange(value));
-    row.appendChild(b);
-    return b;
-  });
-  return {
-    row,
-    select(value) {
-      options.forEach((v, i) => buttons[i]?.classList.toggle('selected', v === value));
-    },
-  };
-}
-
-/** A number field that only reports finite values, so a half-typed "-" does not blank the view. */
-function numberField(cls: string, onCommit: (value: number) => void): HTMLInputElement {
+function textField(cls: string, placeholder: string, onInput: (value: string) => void): HTMLInputElement {
   const input = document.createElement('input');
   input.className = `set-field ${cls}`;
   input.type = 'text';
-  input.addEventListener('input', () => {
-    const v = parseFloat(input.value);
-    if (isFinite(v)) onCommit(v);
-  });
+  input.placeholder = placeholder;
+  input.addEventListener('input', () => onInput(input.value));
   return input;
 }
 
@@ -104,90 +84,97 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
   element.className = 'popover set-panel';
   element.hidden = true;
 
-  const heading = (text: string): HTMLElement => {
-    const h = document.createElement('div');
-    h.className = 'set-heading';
-    h.textContent = text;
-    return h;
-  };
-
-  // ── Grid group ────────────────────────────────────────────────────────────────────────────
+  // ── Grid block: two columns ──────────────────────────────────────────────────────────────
+  // The split is Desmos's, and it is not the obvious one: Grid and Arrows are full-size
+  // controls in the left column, while Axis Numbers and Minor Gridlines are the smaller
+  // 13.6px variant on the right. Pairing them any other way makes "Minor Gridlines" wrap.
   const grid = checkbox('Grid', false, (v) => callbacks.onChange({ showGrid: v }));
-  const minor = checkbox('Minor Gridlines', false, (v) => callbacks.onChange({ showMinorGridlines: v }));
-  const arrows = checkbox('Arrows', true, (v) => callbacks.onChange({ showArrows: v }));
+  const arrows = checkbox('Arrows', false, (v) => callbacks.onChange({ showArrows: v }));
   const numbers = checkbox('Axis Numbers', true, (v) => callbacks.onChange({ showAxisNumbers: v }));
+  const minor = checkbox('Minor Gridlines', true, (v) => callbacks.onChange({ showMinorGridlines: v }));
 
-  const gridGroup = document.createElement('div');
-  gridGroup.className = 'set-grid-group';
   const gridLeft = document.createElement('div');
-  gridLeft.append(grid.row, minor.row);
+  gridLeft.className = 'set-grid-left';
+  gridLeft.append(grid.row, arrows.row);
   const gridRight = document.createElement('div');
-  gridRight.append(arrows.row, numbers.row);
-  gridGroup.append(gridLeft, gridRight);
+  gridRight.className = 'set-grid-right';
+  gridRight.append(numbers.row, minor.row);
 
-  // ── Axis groups ───────────────────────────────────────────────────────────────────────────
-  function axisGroup(axis: 'x' | 'y') {
-    const wrap = document.createElement('div');
-    wrap.className = 'set-axis';
-    wrap.appendChild(heading(`${axis.toUpperCase()}-Axis`));
+  const gridBlock = section(gridLeft, gridRight);
+  gridBlock.classList.add('set-grid-group');
 
-    const labelRow = document.createElement('div');
-    labelRow.className = 'set-row';
-    const labelText = document.createElement('span');
-    labelText.className = 'set-row-label';
-    labelText.textContent = 'Label';
-    const labelInput = document.createElement('input');
-    labelInput.className = 'set-field set-axis-label';
-    labelInput.type = 'text';
-    labelInput.addEventListener('input', () =>
-      callbacks.onChange(axis === 'x' ? { xAxisLabel: labelInput.value } : { yAxisLabel: labelInput.value }),
+  // ── Axis blocks ──────────────────────────────────────────────────────────────────────────
+  function axisBlock(axis: 'x' | 'y') {
+    const isX = axis === 'x';
+
+    // In Desmos the axis name is itself the visibility checkbox, with the label field beside it.
+    const visible = checkbox(`${axis.toUpperCase()}-Axis`, false, (v) =>
+      callbacks.onChange(isX ? { showXAxis: v } : { showYAxis: v }),
     );
-    labelRow.append(labelText, labelInput);
-
-    const rangeRow = document.createElement('div');
-    rangeRow.className = 'set-row set-range';
-    const min = numberField('set-min', (v) =>
-      callbacks.onBoundsChange(axis === 'x' ? { xmin: v } : { ymin: v }),
+    const label = textField('set-axis-label', 'Label', (v) =>
+      callbacks.onChange(isX ? { xAxisLabel: v } : { yAxisLabel: v }),
     );
-    const max = numberField('set-max', (v) =>
-      callbacks.onBoundsChange(axis === 'x' ? { xmax: v } : { ymax: v }),
-    );
-    const le1 = document.createElement('span');
-    le1.className = 'set-sym';
-    le1.innerHTML = `&le;<i>${axis}</i>&le;`;
-    rangeRow.append(min, le1, max);
+    const title = document.createElement('div');
+    title.className = 'set-axis-title';
+    title.append(visible.row, label);
 
-    const stepRow = document.createElement('div');
-    stepRow.className = 'set-row';
-    const stepText = document.createElement('span');
-    stepText.className = 'set-row-label';
-    stepText.textContent = 'Step';
-    const step = document.createElement('input');
-    step.className = 'set-field set-step';
-    step.type = 'text';
-    step.addEventListener('input', () => {
-      const v = parseFloat(step.value);
+    const commitBound = (which: 'min' | 'max') => (raw: string): void => {
+      const v = parseFloat(raw);
+      if (!isFinite(v)) return;                     // a half-typed "-" must not collapse the view
+      if (isX) callbacks.onBoundsChange(which === 'min' ? { xmin: v } : { xmax: v });
+      else callbacks.onBoundsChange(which === 'min' ? { ymin: v } : { ymax: v });
+    };
+    const min = textField('set-bound', '', commitBound('min'));
+    const max = textField('set-bound', '', commitBound('max'));
+
+    const sym = document.createElement('span');
+    sym.className = 'set-sym';
+    sym.innerHTML = `&le;<i>${axis}</i>&le;`;
+
+    const step = textField('', '', (raw) => {
+      const v = parseFloat(raw);
       // Empty or unparseable returns to the automatic 1-2-5 selection rather than erroring.
       const value = isFinite(v) && v > 0 ? v : null;
-      callbacks.onChange(axis === 'x' ? { xAxisStep: value } : { yAxisStep: value });
+      callbacks.onChange(isX ? { xAxisStep: value } : { yAxisStep: value });
     });
-    stepRow.append(stepText, step);
+    const stepWrap = document.createElement('span');
+    stepWrap.className = 'set-step';
+    const stepLabel = document.createElement('span');
+    stepLabel.className = 'set-step-label';
+    stepLabel.textContent = 'Step:';
+    stepWrap.append(stepLabel, step);
 
-    wrap.append(labelRow, rangeRow, stepRow);
-    return { wrap, labelInput, min, max, step };
+    const range = document.createElement('div');
+    range.className = 'set-range';
+    range.append(min, sym, max, stepWrap);
+
+    const block = section(title, range);
+    block.classList.add('set-axis');
+    return { block, visible: visible.input, label, min, max, step };
   }
 
-  const xAxis = axisGroup('x');
-  const yAxis = axisGroup('y');
+  const xAxis = axisBlock('x');
+  const yAxis = axisBlock('y');
 
-  // ── Angle mode ────────────────────────────────────────────────────────────────────────────
-  const angle = segmented<AngleMode>(
-    ['radians', 'degrees'],
-    ['Radians', 'Degrees'],
-    (mode) => callbacks.onChange({ angleMode: mode }),
-  );
+  // ── Angle mode ───────────────────────────────────────────────────────────────────────────
+  const segmented = document.createElement('div');
+  segmented.className = 'set-segmented';
+  const angleButtons: Array<{ mode: AngleMode; el: HTMLButtonElement }> = (
+    [
+      ['radians', 'Radians'],
+      ['degrees', 'Degrees'],
+    ] as ReadonlyArray<readonly [AngleMode, string]>
+  ).map(([mode, text]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'set-seg-btn';
+    b.textContent = text;
+    b.addEventListener('click', () => callbacks.onChange({ angleMode: mode }));
+    segmented.appendChild(b);
+    return { mode, el: b };
+  });
 
-  element.append(gridGroup, xAxis.wrap, yAxis.wrap, angle.row);
+  element.append(gridBlock, xAxis.block, yAxis.block, section(segmented));
 
   let open = false;
 
@@ -218,11 +205,14 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
       minor.input.checked = values.showMinorGridlines;
       arrows.input.checked = values.showArrows;
       numbers.input.checked = values.showAxisNumbers;
-      // Minor gridlines and arrows are meaningless with the grid off, as in Desmos.
+      // Minor gridlines are meaningless with the grid off, as in Desmos.
       minor.input.disabled = !values.showGrid;
 
-      setIfNotFocused(xAxis.labelInput, values.xAxisLabel);
-      setIfNotFocused(yAxis.labelInput, values.yAxisLabel);
+      xAxis.visible.checked = values.showXAxis;
+      yAxis.visible.checked = values.showYAxis;
+
+      setIfNotFocused(xAxis.label, values.xAxisLabel);
+      setIfNotFocused(yAxis.label, values.yAxisLabel);
       setIfNotFocused(xAxis.step, values.xAxisStep === null ? '' : String(values.xAxisStep));
       setIfNotFocused(yAxis.step, values.yAxisStep === null ? '' : String(values.yAxisStep));
 
@@ -232,7 +222,7 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
       setIfNotFocused(yAxis.min, round(bounds.ymin));
       setIfNotFocused(yAxis.max, round(bounds.ymax));
 
-      angle.select(values.angleMode);
+      for (const { mode, el } of angleButtons) el.classList.toggle('selected', mode === values.angleMode);
     },
   };
 }

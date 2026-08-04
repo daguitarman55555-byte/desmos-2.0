@@ -60,6 +60,8 @@ export interface GraphSettings {
   readonly showMinorGridlines: boolean;
   readonly showAxisNumbers: boolean;
   readonly showArrows: boolean;
+  readonly showXAxis: boolean;
+  readonly showYAxis: boolean;
 
   readonly xAxisLabel: string;
   readonly yAxisLabel: string;
@@ -75,6 +77,8 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   showMinorGridlines: true,
   showAxisNumbers: true,
   showArrows: false,
+  showXAxis: true,
+  showYAxis: true,
   xAxisLabel: '',
   yAxisLabel: '',
   xAxisStep: null,

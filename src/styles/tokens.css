@@ -181,19 +181,45 @@
   --toast-close-pad: 3.2px;
 
   /* ── Settings panel (the wrench) ──────────────────────────────────────
-   * Measured on live desmos.com in an extension-free browser. */
+   * Every value measured on live desmos.com in an extension-free browser. */
+  --font-settings: arial, sans-serif;
   --settings-width: 290px;
-  --settings-pad: 12px 14px;
-  --settings-gap: 10px;
+  --settings-pad: 10px;
+  --settings-border: #bbb;
+  --settings-radius: 6px;
+  --settings-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  /* Sections are separated by a rule, not by whitespace. */
+  --settings-divider: #e2e2e2;
+  --settings-section-gap: 10px;
+  /* The grid block is two columns; the left one is a fixed 110px. */
+  --settings-col-left: 110px;
+
   --fs-settings: 16px;
-  --fs-settings-label: 13.6px;
-  --segmented-btn-w: 135.5px;
-  --segmented-btn-h: 36px;
+  --fs-settings-axis: 15.2px;
+  --fs-settings-small: 13.6px;
+  --fs-settings-interval: 18.4px;
+  --fs-settings-input: 13.68px;
+
+  /* Checkboxes are outlined boxes with a drawn tick, never a filled swatch. */
   --settings-checkbox: 17.6px;
   --settings-checkbox-sm: 15px;
-  --settings-axis-input-w: 121.5px;
-  --settings-axis-input-h: 31px;
-  --settings-section-gap: 16px;
+  --settings-checkbox-border: #bbb;
+  --settings-checkbox-radius: 3px;
+
+  /* The segmented control is dark grey when selected — deliberately not the accent blue. */
+  --seg-height: 36px;
+  --seg-selected-bg: rgba(0, 0, 0, 0.65);
+  --seg-border: rgba(0, 0, 0, 0.42);
+  --seg-text: rgba(0, 0, 0, 0.85);
+  --seg-radius: 3px;
+
+  --settings-input-border: rgba(0, 0, 0, 0.42);
+  --settings-input-radius: 5px;
+  --settings-input-pad: 7px;
+  --settings-input-color: #454545;
+  --settings-input-w: 121.5px;
+  /* The Step field alone; Desmos budgets 68.8px for the label and field together. */
+  --settings-step-w: 36px;
 
   /* ── Graph ───────────────────────────────────────────────────────────── */
   /* Measured: the pillbox sits 5px from the top and right of the graph pane, and each

@@ -29,6 +29,9 @@ export interface AxisOptions {
   readonly showMinorGridlines: boolean;
   readonly showAxisNumbers: boolean;
   readonly showArrows: boolean;
+  /** Desmos makes each axis name a checkbox that hides that axis line. */
+  readonly showXAxis: boolean;
+  readonly showYAxis: boolean;
   readonly xAxisLabel: string;
   readonly yAxisLabel: string;
   readonly xAxisStep: number | null;
@@ -40,6 +43,8 @@ export const DEFAULT_AXIS_OPTIONS: AxisOptions = {
   showMinorGridlines: true,
   showAxisNumbers: true,
   showArrows: false,
+  showXAxis: true,
+  showYAxis: true,
   xAxisLabel: '',
   yAxisLabel: '',
   xAxisStep: null,
@@ -121,19 +126,20 @@ export function drawAxisLines(
 ): void {
   const ax = view.toPX(0);
   const ay = view.toPY(0);
-  const xVisible = ax >= -1 && ax <= view.width + 1;
-  const yVisible = ay >= -1 && ay <= view.height + 1;
+  // The line at x=0 is the y-axis, and vice versa — hence the crossed names.
+  const yAxisOnScreen = options.showYAxis && ax >= -1 && ax <= view.width + 1;
+  const xAxisOnScreen = options.showXAxis && ay >= -1 && ay <= view.height + 1;
 
   ctx.strokeStyle = AXIS_COLOUR;
   ctx.lineWidth = 2 / view.dpr;
   ctx.beginPath();
   // The one-pixel slack lets an axis sitting just off-screen still draw its edge.
-  if (xVisible) {
+  if (yAxisOnScreen) {
     const p = view.snapEdge(ax);
     ctx.moveTo(p, 0);
     ctx.lineTo(p, view.height);
   }
-  if (yVisible) {
+  if (xAxisOnScreen) {
     const p = view.snapEdge(ay);
     ctx.moveTo(0, p);
     ctx.lineTo(view.width, p);
@@ -143,12 +149,12 @@ export function drawAxisLines(
   if (!options.showArrows) return;
 
   ctx.fillStyle = AXIS_COLOUR;
-  if (yVisible) {
+  if (xAxisOnScreen) {
     const p = view.snapEdge(ay);
     arrowhead(ctx, view.width, p, 1, 0);
     arrowhead(ctx, 0, p, -1, 0);
   }
-  if (xVisible) {
+  if (yAxisOnScreen) {
     const p = view.snapEdge(ax);
     arrowhead(ctx, p, 0, 0, -1);
     arrowhead(ctx, p, view.height, 0, 1);

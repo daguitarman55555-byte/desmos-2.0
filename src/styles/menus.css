@@ -6,13 +6,17 @@
 .popover {
   position: absolute; z-index: 20;
   background: var(--c-surface);
-  border: var(--hairline) solid var(--c-border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-toast);
+  border: 1px solid var(--settings-border);
+  border-radius: var(--settings-radius);
+  box-shadow: var(--settings-shadow);
 }
 .popover[hidden] { display: none; }
 
-/* ===================== SETTINGS PANEL (the wrench) ===================== */
+/* ===================== SETTINGS PANEL (the wrench) =====================
+ * Layout measured on live desmos.com in an extension-free browser: a 290px popover with a
+ * uniform 10px inset, giving a 270px content column, and sections separated by a hairline rule
+ * rather than by whitespace.
+ */
 
 .set-panel {
   /* Anchored to the left of the wrench, top-aligned with it, as Desmos does. */
@@ -20,73 +24,139 @@
   right: calc(var(--gtools-right) + var(--gbtn-size) + var(--gtools-gap));
   width: var(--settings-width);
   padding: var(--settings-pad);
-  font-size: var(--fs-settings-label);
+  font-family: var(--font-settings);
+  font-size: var(--fs-settings);
   color: var(--c-text);
-  display: flex; flex-direction: column; gap: var(--settings-section-gap);
   max-height: calc(100% - 2 * var(--gtools-top));
   overflow-y: auto;
 }
 
-.set-heading {
-  font-size: var(--fs-settings-label);
-  font-weight: 700;
-  margin-bottom: calc(var(--settings-gap) / 2);
+/* Each block after the first is fenced off by a rule. */
+.set-section + .set-section {
+  margin-top: var(--settings-section-gap);
+  padding-top: var(--settings-section-gap);
+  border-top: 1px solid var(--settings-divider);
 }
 
-/* Grid toggles sit in two columns, matching Desmos. */
-.set-grid-group { display: flex; gap: var(--settings-gap); }
-.set-grid-group > div { display: flex; flex-direction: column; gap: calc(var(--settings-gap) / 2); flex: 1 1 0; }
-
+/* ---- checkboxes ---------------------------------------------------------
+ * Outlined box with a drawn tick. Desmos never fills the box with the accent colour, so
+ * neither do we — the tick is plain black on white.
+ */
 .set-check {
   display: flex; align-items: center; gap: var(--label-gap);
   cursor: pointer; user-select: none;
+  margin: 3px 0 2px;
 }
 .set-check input {
+  appearance: none; -webkit-appearance: none;
   width: var(--settings-checkbox); height: var(--settings-checkbox);
-  margin: 0; accent-color: var(--c-blue); cursor: pointer; flex: 0 0 auto;
+  flex: 0 0 var(--settings-checkbox);
+  margin: 0; padding: 0;
+  background: transparent;
+  border: 1px solid var(--settings-checkbox-border);
+  border-radius: var(--settings-checkbox-radius);
+  cursor: pointer; position: relative;
 }
-.set-check-sm input { width: var(--settings-checkbox-sm); height: var(--settings-checkbox-sm); }
-.set-check input:disabled { cursor: default; }
+/* The tick: two borders of a rotated box. Crisper than a glyph at this size. */
+.set-check input::after {
+  content: ''; position: absolute; opacity: 0;
+  left: 50%; top: 46%;
+  width: 28%; height: 58%;
+  border: solid var(--c-text);
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.set-check input:checked::after { opacity: 1; }
+.set-check input:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 1px; }
+
+.set-check-sm {
+  font-size: var(--fs-settings-small);
+  margin: 3px 0;
+}
+.set-check-sm input {
+  width: var(--settings-checkbox-sm); height: var(--settings-checkbox-sm);
+  flex: 0 0 var(--settings-checkbox-sm);
+}
+
+.set-check input:disabled { cursor: default; border-color: var(--c-border); }
 .set-check:has(input:disabled) { color: var(--c-icon-disabled); cursor: default; }
 
-.set-axis { display: flex; flex-direction: column; gap: calc(var(--settings-gap) / 2); }
+/* ---- grid block: two columns ----
+ * Left holds the full-size controls, right the 13.6px variant. Both columns are fixed so the
+ * labels never reflow as values change.
+ */
+.set-grid-group { display: flex; }
+.set-grid-left { width: var(--settings-col-left); flex: 0 0 var(--settings-col-left); }
+.set-grid-right { flex: 0 0 auto; }
+.set-grid-left .set-check span,
+.set-grid-right .set-check span { white-space: nowrap; }
 
-.set-row { display: flex; align-items: center; gap: var(--label-gap); }
-.set-row-label { flex: 0 0 auto; color: var(--c-slider-label); }
+/* ---- axis blocks ---- */
+.set-axis { font-size: var(--fs-settings-axis); }
+
+.set-axis-title {
+  display: flex; align-items: center; gap: var(--label-gap);
+  margin: 5px 0 2px;
+}
+.set-axis-title .set-check { flex: 1 1 auto; margin: 0; }
 
 .set-field {
-  height: var(--settings-axis-input-h);
-  border: var(--hairline) solid var(--c-border);
-  border-radius: var(--radius-sm);
-  padding: 0 var(--label-gap);
-  font-family: inherit; font-size: var(--fs-settings-label);
-  outline: none; background: var(--c-surface); min-width: 0;
+  border: 1px solid var(--settings-input-border);
+  border-radius: var(--settings-input-radius);
+  padding: var(--settings-input-pad);
+  font-family: inherit;
+  font-size: var(--fs-settings-input);
+  color: var(--settings-input-color);
+  background: var(--c-surface);
+  outline: none; min-width: 0;
 }
 .set-field:focus { border-color: var(--c-blue); }
-.set-axis-label { width: var(--settings-axis-input-w); margin-left: auto; }
-.set-step { width: var(--settings-axis-input-w); margin-left: auto; }
+.set-axis-label { width: var(--settings-input-w); flex: 0 0 var(--settings-input-w); }
 
-.set-range .set-field { flex: 1 1 0; text-align: center; }
-.set-sym {
-  flex: 0 0 auto; font-family: var(--font-math);
-  font-size: var(--fs-settings); white-space: nowrap;
+.set-range {
+  display: flex; align-items: center; gap: var(--label-gap);
+  margin-top: 12px;
 }
-.set-sym i { font-style: italic; margin: 0 2px; }
+/* Desmos's bound fields are inline math views that grow with their content and carry no
+ * padding, while the whole Step group is a fixed ~68.8px. Approximated here by letting the
+ * bounds take all the slack with a tight inset, so a value like -8.60887 is never clipped. */
+.set-range .set-bound {
+  flex: 1 1 0; min-width: 0;
+  text-align: center;
+  padding: var(--settings-input-pad) 3px;
+}
+.set-sym {
+  flex: 0 0 auto;
+  font-family: var(--font-math);
+  font-size: var(--fs-settings-interval);
+  white-space: nowrap;
+}
+.set-sym i { font-style: italic; margin: 0 1px; }
 
-/* Two-option segmented control, as Desmos uses for angle mode. */
-.set-segmented { display: flex; }
+.set-step { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.set-step-label { color: var(--c-text); }
+.set-step input { width: var(--settings-step-w); flex: 0 0 var(--settings-step-w); padding: var(--settings-input-pad) 3px; }
+
+/* ---- segmented control ----
+ * Selected is dark grey, not the accent blue. The negative margins collapse the shared border
+ * between the two halves into a single hairline, which is how Desmos builds it.
+ */
+.set-segmented { display: flex; padding: 0 1px 1px 0; }
 .set-seg-btn {
   flex: 1 1 0;
-  height: var(--segmented-btn-h);
-  border: var(--hairline) solid var(--c-border);
-  background: var(--c-surface);
-  font-family: inherit; font-size: var(--fs-settings-label);
-  color: var(--c-icon); cursor: pointer;
+  height: var(--seg-height);
+  margin: 0 -1px -1px 0;
+  border: 1px solid var(--seg-border);
+  background: transparent;
+  font-family: inherit; font-size: var(--fs-settings);
+  color: var(--seg-text);
+  cursor: pointer;
 }
-.set-seg-btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.set-seg-btn:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: 0; }
-.set-seg-btn:hover { background: var(--c-hover); }
+.set-seg-btn:first-child { border-radius: var(--seg-radius) 0 0 var(--seg-radius); }
+.set-seg-btn:last-child { border-radius: 0 var(--seg-radius) var(--seg-radius) 0; }
+.set-seg-btn:hover { background: rgba(0, 0, 0, 0.04); }
 .set-seg-btn.selected {
-  background: var(--c-blue); border-color: var(--c-blue); color: var(--c-chrome-text);
+  background: var(--seg-selected-bg);
+  border-color: var(--seg-selected-bg);
+  color: var(--c-chrome-text);
 }
-.set-seg-btn.selected:hover { background: var(--c-blue-hover); }
