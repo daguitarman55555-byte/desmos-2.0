@@ -3,10 +3,16 @@
  * No component file may hard-code a pixel value — if a new dimension is needed, it gets a token
  * here first. That rule is what makes a scale change one edit rather than forty.
  *
- * The odd-looking numbers (44.8, 33.6, 9.6, 0.8) are not arbitrary: the prototype was matched
- * against Desmos captures taken at a device pixel ratio of 1.25, so the css values are the
- * device measurements divided by 1.25. 56/1.25 = 44.8. Rounding them to integers visibly shifts
- * the layout, so they are kept exact.
+ * The odd-looking numbers (33.6, 9.6, 0.8) are not arbitrary: the prototype was matched against
+ * Desmos captures taken at a device pixel ratio of 1.25, so the css values are the device
+ * measurements divided by 1.25. Rounding them to integers visibly shifts the layout, so they
+ * are kept exact.
+ *
+ * RETUNED against live desmos.com, measured in a browser with no extensions. DesModder injects
+ * a stylesheet and adds toolbar buttons, so any measurement taken with it installed is void —
+ * the values below were each confirmed in a clean profile. Where the frozen prototype and live
+ * Desmos disagree, live Desmos now wins, which means reference/desmos-demo.html is no longer
+ * the pixel baseline. Retuned so far: --h-topbar, --c-chrome-bg, --fs-math, --row-min-height.
  *
  * Theme is light only. The palette lives here as variables so a dark theme is a drop-in later
  * rather than a rewrite.
@@ -20,7 +26,7 @@
 
   --c-surface: #fff;
   --c-text: #000;
-  --c-chrome-bg: #2f2f2f;
+  --c-chrome-bg: #2a2a2a;
   --c-chrome-text: #fff;
   --c-chrome-divider: #6e6e6e;
   --c-chrome-hover: rgba(255, 255, 255, 0.13);
@@ -66,7 +72,7 @@
   --fs-wordmark-narrow: 21.6px;
   --fs-doc-title: 14.4px;
   --fs-button: 12px;
-  --fs-math: 18.4px;
+  --fs-math: 20.24px;
   --fs-bounds: 15.2px;
   --fs-bounds-step: 12.8px;
   --fs-toast: 12.8px;
@@ -84,7 +90,7 @@
   --radius-lg: 4px;
 
   /* ── Header ──────────────────────────────────────────────────────────── */
-  --h-topbar: 44.8px;
+  --h-topbar: 46px;
   --topbar-pad-x: 9.6px;
   --hdr-icon-size: 33.6px;
   --hdr-btn-height: 33.6px;
@@ -108,7 +114,7 @@
   --resizer-offset: -2.4px;
 
   /* ── Expression row ──────────────────────────────────────────────────── */
-  --row-min-height: 59.2px;
+  --row-min-height: 55.8px;
   --index-width: 37.6px;
   --index-num-left: 4px;
   --index-num-top: 2.4px;
@@ -117,7 +123,9 @@
   --index-icon2-size: 20.8px;
   --index-icon2-top: 49.6px;
   --expr-body-pad: 10.4px 32px 10.4px 9.6px;
-  --expr-math-min-height: 36.8px;
+  /* Drives the row height: body padding (10.4 x 2) + this + borders. The row's own
+   * --row-min-height is only a floor and does not bind while this is larger. */
+  --expr-math-min-height: 33.8px;
   --expr-del-size: 24px;
   --expr-del-right: 8px;
   --expr-del-top: 19px;
