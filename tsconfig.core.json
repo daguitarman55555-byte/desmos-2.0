@@ -1,0 +1,15 @@
+{
+  // The dependency rule, made mechanical.
+  //
+  // `src/core/` must contain zero DOM references (CLAUDE.md). This config compiles core/ alone
+  // with the DOM libs removed, so `document`, `window`, `HTMLElement` and `CanvasRenderingContext2D`
+  // are not merely discouraged — they are compile errors. `npm run typecheck` runs it.
+  //
+  // If a core file ever needs one of those, the design is wrong. Do not add "DOM" to fix the build.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/core"]
+}

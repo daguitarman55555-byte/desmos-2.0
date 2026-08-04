@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Untitled Graph</title>
+<link rel="stylesheet" href="vendor/mathquill.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: #fff; color: #000; -webkit-font-smoothing: antialiased;
+}
+#app { display: flex; flex-direction: column; height: 100%; }
+
+/* ===================== HEADER ===================== */
+#topbar {
+  height: 44.8px; flex: 0 0 44.8px; background: #2f2f2f;
+  display: flex; align-items: center; position: relative; z-index: 30; user-select: none;
+}
+#topbar .left  { display: flex; align-items: center; padding-left: 9.6px; min-width: 0; flex: 0 1 auto; }
+#topbar .right { display: flex; align-items: center; margin-left: auto; padding-right: 9.6px; flex: 0 0 auto; }
+
+.hdr-icon-btn {
+  width: 33.6px; height: 33.6px; border: 0; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; border-radius: 2.4px;
+}
+.hdr-icon-btn:hover { background: rgba(255,255,255,.13); }
+#doc-divider { width: 0.8px; height: 19.2px; background: #6e6e6e; margin: 0 11.2px 0 4.8px; }
+#doc-title { color: #fff; font-size: 14.4px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#save-btn {
+  margin-left: 12.8px; height: 30.4px; padding: 0 16.8px; border: 0; border-radius: 2.4px;
+  font-size: 12px; font-family: inherit; background: #4a4a4a; color: #a8a8a8; cursor: default;
+  transition: background .12s, color .12s;
+}
+#save-btn.dirty { background: #2f72dc; color: #fff; cursor: pointer; }
+#save-btn.dirty:hover { background: #2b68c7; }
+
+#wordmark {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  color: #fff; font-size: 25.6px; line-height: 1; pointer-events: none;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 300; letter-spacing: 0.96px;
+}
+
+.hdr-btn { height: 33.6px; padding: 0 15px; border-radius: 2.4px; font-size: 12px; font-family: inherit; cursor: pointer; white-space: nowrap; }
+#login-btn  { background: transparent; color: #fff; border: 0.8px solid #9a9a9a; margin-right: 8px; }
+#login-btn:hover { background: rgba(255,255,255,.1); }
+#signup-btn { background: #2f72dc; color: #fff; border: 0.8px solid #2f72dc; margin-right: 8px; }
+#signup-btn:hover { background: #2b68c7; }
+
+/* ===================== BODY ===================== */
+#body { flex: 1 1 auto; display: flex; min-height: 0; }
+
+/* ===================== PANEL ===================== */
+#panel {
+  width: 466.4px; flex: 0 0 auto; max-width: 68%; min-width: 192px;
+  background: #fff; display: flex; flex-direction: column;
+  position: relative; border-right: 0.8px solid #cbcbcb;
+}
+#panel.collapsed { width: 0; min-width: 0; border-right: 0; overflow: hidden; }
+#panel.collapsed + #resizer { display: none; }
+
+#panel-toolbar {
+  height: 51.2px; flex: 0 0 51.2px; display: flex; align-items: center;
+  padding: 0 9.6px 0 6.4px; border-bottom: 0.8px solid #cbcbcb; background: #fff;
+}
+.tool-btn {
+  width: 35.2px; height: 35.2px; border: 0; background: none; cursor: pointer; color: #3b3b3b;
+  display: flex; align-items: center; justify-content: center; border-radius: 2.4px; flex: 0 0 35.2px;
+}
+.tool-btn:hover { background: #ededed; }
+.tool-btn:disabled { color: #b8b8b8; cursor: default; }
+.tool-btn:disabled:hover { background: none; }
+.tb-gap { flex: 1 1 auto; }
+
+#expr-list { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+#expr-list::-webkit-scrollbar { width: 8px; }
+#expr-list::-webkit-scrollbar-thumb { background: #cacaca; border-radius: 4px; }
+
+/* ---- expression row ---- */
+.expr-row {
+  display: flex; align-items: stretch; min-height: 59.2px; position: relative; background: #fff;
+  border-top: 0.8px solid transparent; border-bottom: 0.8px solid #cbcbcb; margin-top: -0.8px;
+}
+.expr-row.focused { border-top-color: #2f72dc; border-bottom-color: #2f72dc; z-index: 2; }
+
+.expr-index {
+  width: 37.6px; flex: 0 0 37.6px; background: #f5f5f5; border-right: 0.8px solid #cbcbcb;
+  position: relative; user-select: none; cursor: pointer;
+}
+.expr-row.focused .expr-index { background: #2f72dc; border-right-color: #2f72dc; }
+.idx-num { position: absolute; left: 4px; top: 2.4px; font-size: 9.6px; color: #909090; line-height: 1; }
+.expr-row.focused .idx-num { color: #fff; }
+
+.idx-icon {
+  position: absolute; left: 50%; transform: translateX(-50%); top: 15.2px;
+  width: 24px; height: 24px; cursor: pointer; display: none;
+}
+.idx-icon.show { display: block; }
+.idx-icon2 {
+  position: absolute; left: 50%; transform: translateX(-50%); top: 49.6px;
+  width: 20.8px; height: 20.8px; cursor: pointer; display: none;
+}
+.idx-icon2.show { display: block; }
+
+.expr-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 10.4px 32px 10.4px 9.6px; }
+.expr-math { min-height: 36.8px; display: flex; align-items: center; }
+
+.expr-del {
+  position: absolute; right: 8px; top: 19px; width: 24px; height: 24px;
+  border: 0; background: none; cursor: pointer; color: #5e5e5e; border-radius: 2.4px;
+  display: none; align-items: center; justify-content: center;
+}
+.expr-del.show { display: flex; }
+.expr-del:hover { background: #ededed; color: #000; }
+
+/* ---- slider ---- */
+.slider-row { display: none; align-items: center; gap: 8px; margin-top: 8px; padding-right: 6.4px; }
+.slider-row.show { display: flex; }
+.sl-lim { font-size: 11.2px; color: #666; min-width: 20.8px; text-align: center; user-select: none; cursor: pointer; }
+.sl-track { position: relative; flex: 1 1 auto; height: 16px; cursor: pointer; }
+.sl-track::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 6.4px; height: 3.2px;
+  background: #dcdcdc; border-radius: 1.6px;
+}
+.sl-tick { position: absolute; top: 4.8px; width: 0.8px; height: 6.4px; background: #bdbdbd; }
+.sl-thumb {
+  position: absolute; top: 2.4px; width: 11.2px; height: 11.2px; margin-left: -5.6px;
+  background: #2f72dc; border-radius: 50%; box-shadow: 0 0 0 4px rgba(47,114,220,.20);
+}
+
+/* ---- bounds editor ---- */
+.bounds-row { display: none; align-items: center; flex-wrap: wrap; row-gap: 4.8px; margin-top: 9.6px; font-size: 15.2px; color: #000; min-width: 0; }
+.bounds-row.show { display: flex; }
+.bounds-row .bf {
+  width: 36.8px; border: 0; border-bottom: 0.8px solid #9a9a9a; outline: none; background: transparent;
+  font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 15.2px; text-align: center; padding: 0 1.6px 1.6px;
+}
+.bounds-row .bsym { font-family: "Times New Roman", Times, serif; font-style: italic; margin: 0 6.4px; }
+.bounds-row .bstep { margin-left: 20.8px; font-size: 12.8px; font-style: normal; font-family: inherit; }
+.bounds-row .bstep .bf { margin-left: 6.4px; width: 49.6px; }
+
+/* ---- panel furniture ---- */
+#panel-footer {
+  position: absolute; bottom: 8px; left: 0; right: 0; text-align: center;
+  pointer-events: none; font-size: 9.6px; color: #b6b6b6; letter-spacing: 0.16px;
+}
+#panel-footer .pb-word {
+  display: block; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 300; font-size: 20.8px; color: #c2c2c2; line-height: 1.05; margin-top: 1.6px; letter-spacing: 0.48px;
+}
+#keypad-btn {
+  position: absolute; left: 9.6px; bottom: 9.6px; width: 68px; height: 38.4px;
+  background: #fff; border: 0.8px solid #cbcbcb; border-radius: 3.2px;
+  display: flex; align-items: center; justify-content: center; gap: 5.6px;
+  cursor: pointer; box-shadow: 0 0.8px 1.6px rgba(0,0,0,.07); z-index: 6;
+}
+#keypad-btn:hover { background: #f6f6f6; }
+#login-toast {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: 52.8px;
+  width: 269.6px; max-width: calc(100% - 19.2px); background: #fff;
+  border: 0.8px solid #dedede; border-radius: 4px; box-shadow: 0 1.6px 4px rgba(0,0,0,.13);
+  padding: 8.4px 27.2px 8.4px 11.2px; display: flex; align-items: center; gap: 10.4px; z-index: 5;
+}
+#login-toast .toast-text { font-size: 12.8px; line-height: 1.38; }
+#login-toast a { color: #2f72dc; text-decoration: underline; cursor: pointer; }
+#toast-close {
+  position: absolute; right: 5.6px; top: 50%; transform: translateY(-50%);
+  border: 0; background: none; cursor: pointer; color: #4a4a4a; padding: 3.2px; display: flex;
+}
+
+#resizer { width: 4px; flex: 0 0 4px; margin-left: -2.4px; cursor: col-resize; z-index: 10; }
+
+/* ===================== GRAPH ===================== */
+#graph-wrap { flex: 1 1 auto; position: relative; min-width: 0; background: #fff; overflow: hidden; }
+#graph { display: block; width: 100%; height: 100%; }
+#graph-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.pt-label {
+  position: absolute; pointer-events: auto; display: flex; align-items: center; gap: 6.4px;
+  background: #fff; border: 0.8px solid #c4c4c4; border-radius: 3.2px;
+  box-shadow: 0 1.6px 4px rgba(0,0,0,.17); padding: 3.2px 6.4px; white-space: nowrap;
+  font-family: "Times New Roman", Times, serif; font-style: italic; font-size: 16px; color: #000;
+}
+.pt-export {
+  width: 13.6px; height: 13.6px; flex: 0 0 13.6px; padding: 0;
+  border: 0; background: none; cursor: pointer; color: #4d4d4d;
+}
+.pt-export:hover { color: #000; }
+
+#graph-tools { position: absolute; right: 4px; top: 7px; display: flex; flex-direction: column; gap: 7.2px; z-index: 4; }
+.gbtn {
+  width: 35.2px; height: 35.2px; background: #fff; border: 0.8px solid #cbcbcb;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: #4d4d4d;
+}
+.gbtn:hover { background: #f2f2f2; }
+.zoom-group { display: flex; flex-direction: column; }
+.zoom-group .gbtn + .gbtn:not([hidden]) { border-top: 0; }
+.gbtn[hidden] { display: none; }
+
+/* ===================== MATHQUILL OVERRIDES ===================== */
+.mq-editable-field, .mq-math-mode { border: 0 !important; }
+.mq-editable-field.mq-focused { box-shadow: none !important; border: 0 !important; outline: none !important; }
+.expr-math .mq-editable-field { font-size: 18.4px; width: 100%; }
+.expr-math .mq-root-block { padding: 1.6px 0; }
+.mq-editable-field .mq-cursor { border-left: 0.8px solid #000; }
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 1080px) { #wordmark { font-size: 21.6px; } }
+@media (max-width: 900px)  { #wordmark { display: none; } }
+@media (max-width: 760px)  {
+  #login-btn { display: none; }
+  #doc-title { max-width: 104px; }
+}
+@media (max-width: 620px)  {
+  #signup-btn { display: none; }
+  #panel { max-width: 100%; }
+}
+@media (max-height: 560px) { #panel-footer, #login-toast { display: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===================== HEADER ===================== -->
+  <header id="topbar">
+    <div class="left">
+      <button class="hdr-icon-btn" title="Open Graph">
+        <svg width="20" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.6 18.6V5.4A1.4 1.4 0 0 1 4 4h4.4l1.9 2.2H15.8a1.4 1.4 0 0 1 1.4 1.4v1.5"/>
+          <path d="M2.6 18.6l2.9-8.1A1.2 1.2 0 0 1 6.6 9.7H21a.9.9 0 0 1 .86 1.2l-2.6 7.7z"/>
+        </svg>
+      </button>
+      <div id="doc-divider"></div>
+      <span id="doc-title">Untitled Graph</span>
+      <button id="save-btn">Save</button>
+    </div>
+
+    <div id="wordmark">desmos</div>
+
+    <div class="right">
+      <button class="hdr-btn" id="login-btn">Log In</button>
+      <button class="hdr-btn" id="signup-btn">Sign Up</button>
+      <button class="hdr-icon-btn" title="Share Graph">
+        <svg width="19.2" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 10.5H5.6A1.6 1.6 0 0 0 4 12.1v6.3A1.6 1.6 0 0 0 5.6 20h12.8a1.6 1.6 0 0 0 1.6-1.6v-6.3a1.6 1.6 0 0 0-1.6-1.6H16"/>
+          <path d="M12 14.6V4"/><path d="M8.3 7.5L12 3.8l3.7 3.7"/>
+        </svg>
+      </button>
+      <button class="hdr-icon-btn" title="Help">
+        <svg width="19.2" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9.1"/>
+          <path d="M9.3 9.3a2.75 2.75 0 1 1 3.45 2.65c-.62.19-.83.7-.83 1.33v.55"/>
+          <circle cx="11.95" cy="16.9" r="1.05" fill="#fff" stroke="none"/>
+        </svg>
+      </button>
+      <button class="hdr-icon-btn" title="Language">
+        <svg width="19.2" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9.1"/><path d="M2.9 12h18.2"/>
+          <path d="M12 2.9c2.5 2.55 3.85 5.75 3.85 9.1S14.5 18.55 12 21.1c-2.5-2.55-3.85-5.75-3.85-9.1S9.5 5.45 12 2.9z"/>
+        </svg>
+      </button>
+      <button class="hdr-icon-btn" title="Desmos">
+        <svg width="25.6" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M7 8.5c0 10.2 3.7 15.5 9 15.5s9-5.3 9-15.5" stroke="#3ec415" stroke-width="3.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================== BODY ===================== -->
+  <div id="body">
+    <div id="panel">
+      <div id="panel-toolbar">
+        <button class="tool-btn" id="add-btn" title="Add Item">
+          <svg width="22.4" height="28" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M12 4.6v14.8M4.6 12h14.8"/></svg>
+        </button>
+        <div class="tb-gap"></div>
+        <button class="tool-btn" id="undo-btn" title="Undo" disabled>
+          <svg width="21.6" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.2 8.6h10.6a5.4 5.4 0 1 1 0 10.8H9.2"/><path d="M8.1 4.7L4.2 8.6l3.9 3.9"/>
+          </svg>
+        </button>
+        <button class="tool-btn" id="redo-btn" title="Redo" disabled>
+          <svg width="21.6" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19.8 8.6H9.2a5.4 5.4 0 1 0 0 10.8h5.6"/><path d="M15.9 4.7l3.9 3.9-3.9 3.9"/>
+          </svg>
+        </button>
+        <div class="tb-gap"></div>
+        <button class="tool-btn" id="settings-btn" title="Graph Settings">
+          <svg width="20.8" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55">
+            <circle cx="12" cy="12" r="3.1"/>
+            <path d="M19.1 14.7a1.55 1.55 0 0 0 .31 1.71l.06.06a1.85 1.85 0 1 1-2.62 2.62l-.05-.06a1.55 1.55 0 0 0-1.72-.31 1.55 1.55 0 0 0-.94 1.42v.16a1.85 1.85 0 1 1-3.7 0v-.09a1.55 1.55 0 0 0-1.02-1.42 1.55 1.55 0 0 0-1.71.31l-.06.06a1.85 1.85 0 1 1-2.62-2.62l.06-.06a1.55 1.55 0 0 0 .31-1.71 1.55 1.55 0 0 0-1.42-.94H3.7a1.85 1.85 0 1 1 0-3.7h.09a1.55 1.55 0 0 0 1.42-1.02 1.55 1.55 0 0 0-.31-1.71l-.06-.06A1.85 1.85 0 1 1 7.46 4.8l.06.06a1.55 1.55 0 0 0 1.71.31h.08a1.55 1.55 0 0 0 .94-1.42V3.7a1.85 1.85 0 1 1 3.7 0v.09a1.55 1.55 0 0 0 .94 1.42 1.55 1.55 0 0 0 1.72-.31l.05-.06a1.85 1.85 0 1 1 2.62 2.62l-.06.06a1.55 1.55 0 0 0-.31 1.71v.08a1.55 1.55 0 0 0 1.42.94h.16a1.85 1.85 0 1 1 0 3.7h-.09a1.55 1.55 0 0 0-1.4.75z"/>
+          </svg>
+        </button>
+        <button class="tool-btn" id="collapse-btn" title="Hide Expressions List">
+          <svg width="21.6" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13.2 5.6L6.8 12l6.4 6.4"/><path d="M18.6 5.6L12.2 12l6.4 6.4"/>
+          </svg>
+        </button>
+      </div>
+
+      <div id="expr-list"></div>
+
+      <div id="panel-footer">powered by<span class="pb-word">desmos</span></div>
+
+      <div id="keypad-btn" title="Keypad">
+        <svg width="21.6" height="19" viewBox="0 0 27 19" fill="none" stroke="#3f3f3f" stroke-width="1.25">
+          <rect x="0.9" y="0.9" width="25.2" height="17.2" rx="2.2"/>
+          <path d="M4.2 5.4h1.7M8.2 5.4h1.7M12.2 5.4h1.7M16.2 5.4h1.7M20.2 5.4h1.7M4.2 9.4h1.7M8.2 9.4h1.7M12.2 9.4h1.7M16.2 9.4h1.7M20.2 9.4h1.7M8 13.4h11" stroke-linecap="round"/>
+        </svg>
+        <svg width="11.2" height="9" viewBox="0 0 14 9" fill="none" stroke="#3f3f3f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 6.9L7 1.9l5.4 5"/></svg>
+      </div>
+
+      <div id="login-toast">
+        <svg width="38.4" height="38" viewBox="0 0 48 38" fill="none" style="flex:0 0 48px">
+          <path d="M7 5c0 16.5 7.4 27 17 27s17-10.5 17-27" stroke="#232323" stroke-width="5.6" stroke-linecap="round"/>
+        </svg>
+        <div class="toast-text"><a>Log in</a> or <a>sign up</a> to save your beautiful math!</div>
+        <button id="toast-close" title="Dismiss">
+          <svg width="13.6" height="17" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" fill="none"><path d="M5 5l14 14M19 5L5 19"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="resizer"></div>
+
+    <div id="graph-wrap">
+      <canvas id="graph"></canvas>
+      <div id="graph-overlay"></div>
+      <div id="graph-tools">
+        <button class="gbtn" id="wrench-btn" title="Graph Settings">
+          <svg width="18.4" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 6.6a4.1 4.1 0 0 0 5.3 5.3l-8.4 8.4a2.45 2.45 0 1 1-3.5-3.5z"/>
+            <path d="M15 6.6L17.4 4a4.1 4.1 0 0 1 2.9 7.9"/>
+          </svg>
+        </button>
+        <div class="zoom-group">
+          <button class="gbtn" id="zoom-in" title="Zoom In"><svg width="18.4" height="23" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button class="gbtn" id="zoom-out" title="Zoom Out"><svg width="18.4" height="23" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"><path d="M5 12h14"/></svg></button>
+          <button class="gbtn" id="home-btn" title="Default Viewport" hidden>
+            <svg width="18.4" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3.4 10.4L12 3.4l8.6 7"/><path d="M5.6 9.1v10.3h12.8V9.1"/><path d="M9.9 19.4v-5.6h4.2v5.6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/jquery.min.js"></script>
+<script src="vendor/mathquill.min.js"></script>
+<script>
+/* =========================================================================
+   DESMOS 2.0 — UI shell + MathQuill live math fields
+   ========================================================================= */
+const MQ = MathQuill.getInterface(2);
+const AUTO_OPS = 'sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh '
+  + 'arcsinh arccosh arctanh ln log exp abs sign floor ceil round mod gcd lcm '
+  + 'min max mean median stdev total length nCr nPr';
+
+/* ------------------------- LaTeX -> plain source ------------------------- */
+function readGroup(s, i) {              // s[i] must be '{'
+  let d = 0;
+  for (let j = i; j < s.length; j++) {
+    if (s[j] === '{') d++;
+    else if (s[j] === '}') { d--; if (!d) return [s.slice(i + 1, j), j + 1]; }
+  }
+  return [s.slice(i + 1), s.length];
+}
+function latexToSrc(tex) {
+  let s = tex, out = '', i = 0;
+  s = s.replace(/\\left|\\right/g, '')
+       .replace(/\\cdot|\\times/g, '*')
+       .replace(/\\div/g, '/')
+       .replace(/\\ /g, '')
+       .replace(/\\operatorname\{([A-Za-z]+)\}/g, '$1')
+       .replace(/\\pi/g, 'pi').replace(/\\tau/g, 'tau').replace(/\\theta/g, 'theta');
+  while (i < s.length) {
+    if (s.startsWith('\\frac', i)) {
+      let j = i + 5;
+      const [a, j2] = readGroup(s, j); const [b, j3] = readGroup(s, j2);
+      out += '((' + latexToSrc(a) + ')/(' + latexToSrc(b) + '))'; i = j3; continue;
+    }
+    if (s.startsWith('\\sqrt', i)) {
+      let j = i + 5;
+      if (s[j] === '[') { const k = s.indexOf(']', j); const n = s.slice(j + 1, k);
+        const [a, j2] = readGroup(s, k + 1);
+        out += '((' + latexToSrc(a) + ')^(1/(' + latexToSrc(n) + ')))'; i = j2; continue; }
+      const [a, j2] = readGroup(s, j);
+      out += 'sqrt(' + latexToSrc(a) + ')'; i = j2; continue;
+    }
+    if (s[i] === '^' && s[i + 1] === '{') {
+      const [a, j2] = readGroup(s, i + 1);
+      out += '^(' + latexToSrc(a) + ')'; i = j2; continue;
+    }
+    if (s[i] === '\\') {                       // strip unknown command backslash
+      let j = i + 1; while (j < s.length && /[A-Za-z]/.test(s[j])) j++;
+      out += s.slice(i + 1, j); i = j; continue;
+    }
+    if (s[i] === '{' || s[i] === '}') { i++; continue; }
+    out += s[i++];
+  }
+  return out;
+}
+
+/* ------------------------- tokenizer / parser / compiler ------------------------- */
+const FUNCS = {
+  sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos, atan: Math.atan,
+  arcsin: Math.asin, arccos: Math.acos, arctan: Math.atan,
+  sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+  sqrt: Math.sqrt, abs: Math.abs, exp: Math.exp, ln: Math.log, log: Math.log10,
+  floor: Math.floor, ceil: Math.ceil, round: Math.round, sign: Math.sign,
+  min: Math.min, max: Math.max, mod: (a, b) => ((a % b) + b) % b,
+  sec: x => 1 / Math.cos(x), csc: x => 1 / Math.sin(x), cot: x => 1 / Math.tan(x)
+};
+const CONSTS = { pi: Math.PI, 'π': Math.PI, tau: 2 * Math.PI, e: Math.E };
+
+function tokenize(src) {
+  const t = []; let i = 0;
+  const D = c => c >= '0' && c <= '9', A = c => /[A-Za-zα-ωΑ-Ω]/.test(c);
+  while (i < src.length) {
+    const c = src[i];
+    if (c === ' ') { i++; continue; }
+    if (D(c) || (c === '.' && D(src[i + 1]))) {
+      let j = i; while (j < src.length && (D(src[j]) || src[j] === '.')) j++;
+      t.push({ k: 'num', v: parseFloat(src.slice(i, j)) }); i = j; continue;
+    }
+    if (A(c)) {
+      let j = i; while (j < src.length && A(src[j])) j++;
+      const word = src.slice(i, j); let p = 0;
+      while (p < word.length) {
+        let hit = null;
+        for (let L = word.length - p; L >= 2; L--) {
+          const cand = word.substr(p, L).toLowerCase();
+          if (FUNCS[cand] || CONSTS[cand]) { hit = { n: cand, L }; break; }
+        }
+        if (hit) { t.push(FUNCS[hit.n] ? { k: 'func', v: hit.n } : { k: 'const', v: hit.n }); p += hit.L; }
+        else { const ch = word[p]; t.push(ch === 'e' ? { k: 'const', v: 'e' } : { k: 'var', v: ch }); p++; }
+      }
+      i = j; continue;
+    }
+    if ('+-*/^(),='.includes(c)) { t.push({ k: 'op', v: c }); i++; continue; }
+    throw new Error('char');
+  }
+  return t;
+}
+function parse(tokens) {
+  let p = 0;
+  const peek = () => tokens[p], eat = v => (tokens[p] && tokens[p].v === v ? (p++, true) : false);
+  function E() { return Add(); }
+  function Add() { let l = Mul(); while (peek() && (peek().v === '+' || peek().v === '-') && peek().k === 'op') { const o = tokens[p++].v; l = { t: 'bin', op: o, l, r: Mul() }; } return l; }
+  function Mul() {
+    let l = Un();
+    for (;;) { const k = peek(); if (!k) break;
+      if (k.k === 'op' && (k.v === '*' || k.v === '/')) { const o = tokens[p++].v; l = { t: 'bin', op: o, l, r: Un() }; }
+      else if (k.k === 'num' || k.k === 'var' || k.k === 'const' || k.k === 'func' || k.v === '(') l = { t: 'bin', op: '*', l, r: Un() };
+      else break; }
+    return l;
+  }
+  function Un() { if (peek() && peek().v === '-') { p++; return { t: 'neg', a: Un() }; } if (peek() && peek().v === '+') { p++; return Un(); } return Pw(); }
+  function Pw() { const b = Pr(); if (peek() && peek().v === '^') { p++; return { t: 'bin', op: '^', l: b, r: Un() }; } return b; }
+  function Pr() {
+    const k = tokens[p]; if (!k) throw new Error('eof');
+    if (k.k === 'num') { p++; return { t: 'num', v: k.v }; }
+    if (k.k === 'const') { p++; return { t: 'num', v: CONSTS[k.v] }; }
+    if (k.k === 'var') { p++; if (peek() && peek().v === '(') { p++; const a = [E()]; while (eat(',')) a.push(E()); eat(')'); return { t: 'ucall', f: k.v, args: a }; } return { t: 'var', v: k.v }; }
+    if (k.k === 'func') { p++; if (!eat('(')) throw new Error('('); const a = [E()]; while (eat(',')) a.push(E()); if (!eat(')')) throw new Error(')'); return { t: 'call', f: k.v, args: a }; }
+    if (k.v === '(') { p++; const it = [E()]; while (eat(',')) it.push(E()); if (!eat(')')) throw new Error(')'); return it.length === 1 ? it[0] : { t: 'tuple', items: it }; }
+    throw new Error('tok');
+  }
+  const n = E(); if (p < tokens.length) throw new Error('trail'); return n;
+}
+const userVars = {}, userFuncs = {};
+function compile(n) {
+  switch (n.t) {
+    case 'num': { const v = n.v; return () => v; }
+    case 'var': { const q = n.v; if (q === 'x') return s => s.x; if (q === 'y') return s => s.y;
+      return s => (s && q in s ? s[q] : (q in userVars ? userVars[q] : NaN)); }
+    case 'neg': { const a = compile(n.a); return s => -a(s); }
+    case 'tuple': { const c = n.items.map(compile); return s => c.map(f => f(s)); }
+    case 'call': { const f = FUNCS[n.f], c = n.args.map(compile);
+      return c.length === 1 ? s => f(c[0](s)) : s => f(...c.map(g => g(s))); }
+    case 'ucall': { const nm = n.f, c = n.args.map(compile);
+      return s => { const u = userFuncs[nm]; if (!u) return NaN;
+        const sc = Object.create(null); u.params.forEach((pn, i) => sc[pn] = c[i] ? c[i](s) : NaN); return u.body(sc); }; }
+    case 'bin': { const a = compile(n.l), b = compile(n.r);
+      switch (n.op) { case '+': return s => a(s) + b(s); case '-': return s => a(s) - b(s);
+        case '*': return s => a(s) * b(s); case '/': return s => a(s) / b(s); case '^': return s => Math.pow(a(s), b(s)); } }
+  }
+  throw new Error('compile');
+}
+
+/* ------------------------- expression model ------------------------- */
+/* Desmos assigns colours in this cycle, and only at the moment an expression
+   first becomes graphable — blank rows must not consume a slot. */
+const COLORS = ['#c74440', '#2d70b3', '#388c46', '#6042a6', '#000000', '#fa7e19'];
+let colorIdx = 0, exprs = [], focusedId = null, uid = 1, dirty = false;
+
+function newExpr(latex) {
+  return { id: uid++, latex: latex || '', color: null,
+           kind: null, err: false, visible: true, min: -10, max: 10, step: '', val: 0,
+           sliderKind: null, sliderLabel: '' };
+}
+function topEq(s) { let d = 0; for (let i = 0; i < s.length; i++) { const c = s[i];
+  if (c === '(') d++; else if (c === ')') d--; else if (c === '=' && !d) return i; } return -1; }
+
+const NUMERIC = /^-?(\d+\.?\d*|\.\d+)$/;
+
+function analyze(e) {
+  e.kind = null; e.err = false; e.fn = null; e.varName = null; e.sliderKind = null;
+  const src = latexToSrc(e.latex).trim();
+  if (!src) return;
+  try {
+    const q = topEq(src);
+    if (q >= 0) {
+      const lhs = src.slice(0, q).trim(), rhs = src.slice(q + 1).trim();
+      // y = f(x) / x = g(y), in either orientation: cos(y)=x is a vertical sweep,
+      // not an implicit curve, so it gets fast sampling and points of interest.
+      if (lhs === 'y' || lhs === 'x') {
+        const ast = parse(tokenize(rhs));
+        if (!usesVar(ast, lhs)) {
+          e.kind = lhs; e.fn = compile(ast);
+          if (NUMERIC.test(rhs)) { e.sliderKind = 'const'; e.sliderLabel = lhs; e.val = parseFloat(rhs); }
+          return;
+        }
+      }
+      if (rhs === 'y' || rhs === 'x') {
+        const ast = parse(tokenize(lhs));
+        if (!usesVar(ast, rhs)) { e.kind = rhs; e.fn = compile(ast); return; }
+      }
+      const fm = lhs.match(/^([A-Za-z])\(([A-Za-z](?:,[A-Za-z])*)\)$/);
+      if (fm) {
+        const params = fm[2].split(',');
+        userFuncs[fm[1]] = { params, body: compile(parse(tokenize(rhs))) };
+        e.kind = 'func'; e.fname = fm[1];
+        if (params.length === 1) { const b = userFuncs[fm[1]]; e.fn = s => b.body({ [params[0]]: s.x }); }
+        return;
+      }
+      if (/^[A-Za-z]$/.test(lhs) && lhs !== 'x' && lhs !== 'y') {
+        const v = compile(parse(tokenize(rhs)))({});
+        if (isFinite(v)) {
+          userVars[lhs] = v; e.val = v; e.kind = 'slider'; e.varName = lhs;
+          e.sliderKind = 'var'; e.sliderLabel = lhs; return;
+        }
+      }
+      const L = compile(parse(tokenize(lhs))), R = compile(parse(tokenize(rhs)));
+      e.kind = 'implicit'; e.fn = s => L(s) - R(s); return;
+    }
+    const ast = parse(tokenize(src));
+    if (ast.t === 'tuple' && ast.items.length === 2) { e.kind = 'point'; e.fn = compile(ast); return; }
+    // a bare expression in terms of y has no graph -- Desmos flags it rather than guessing
+    if (usesVar(ast, 'y')) { e.err = true; return; }
+    e.kind = 'y'; e.fn = compile(ast);
+  } catch (_) { e.err = true; }
+}
+function usesVar(n, name) {
+  if (!n || typeof n !== 'object') return false;
+  if (n.t === 'var') return n.v === name;
+  if (n.t === 'neg') return usesVar(n.a, name);
+  if (n.t === 'bin') return usesVar(n.l, name) || usesVar(n.r, name);
+  if (n.args) return n.args.some(a => usesVar(a, name));
+  if (n.items) return n.items.some(a => usesVar(a, name));
+  return false;
+}
+const GRAPHED = new Set(['y', 'x', 'implicit', 'point', 'func']);
+function recompute() {
+  exprs.forEach(e => {
+    analyze(e);
+    if (!e.color && GRAPHED.has(e.kind) && !e.err) e.color = COLORS[colorIdx++ % COLORS.length];
+  });
+}
+
+/* ------------------------- SVG icon builders ------------------------- */
+/* Desmos draws a SOLID disc in the expression colour with the wave knocked out
+   in white. Hidden expressions invert it: white disc, coloured wave + ring. */
+function curveIcon(color, on) {
+  return `<svg viewBox="0 0 30 30" width="100%" height="100%">
+    <circle cx="15" cy="15" r="14.3" fill="${on ? color : '#fff'}" stroke="${on ? color : '#c4c4c4'}" stroke-width="1.4"/>
+    <path d="M5 20.2c2.1-10.6 4.9-10.6 7 0s4.9 10.6 7 0 4.6-9.6 5.9-4.4"
+      fill="none" stroke="${on ? '#fff' : color}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function warnIcon() {
+  return `<svg viewBox="0 0 30 30" width="100%" height="100%">
+    <path d="M15.85 4.9l11.7 20.3a.98.98 0 0 1-.85 1.47H3.3a.98.98 0 0 1-.85-1.47l11.7-20.3a.98.98 0 0 1 1.7 0z" fill="#c74440"/>
+    <path d="M15 11.3v6.6" stroke="#fff" stroke-width="2.3" stroke-linecap="round"/>
+    <circle cx="15" cy="22" r="1.35" fill="#fff"/>
+  </svg>`;
+}
+function playIcon(light) {
+  const c = light ? '#fff' : '#7d7d7d';
+  return `<svg viewBox="0 0 30 30" width="100%" height="100%">
+    <circle cx="15" cy="15" r="13.2" fill="none" stroke="${c}" stroke-width="1.7"/>
+    <path d="M12.2 9.6l8.4 5.4-8.4 5.4z" fill="${c}"/>
+  </svg>`;
+}
+function swapIcon(light) {
+  const c = light ? '#fff' : '#7d7d7d';
+  return `<svg viewBox="0 0 26 26" width="100%" height="100%" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.5 9.5h19M18.5 5.5l4 4-4 4"/><path d="M22.5 16.5h-19M7.5 12.5l-4 4 4 4"/>
+  </svg>`;
+}
+const X_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M5 5l14 14M19 5L5 19"/></svg>';
+
+/* ------------------------- panel rendering ------------------------- */
+const listEl = document.getElementById('expr-list');
+const saveBtn = document.getElementById('save-btn');
+
+function markDirty() { if (!dirty) { dirty = true; saveBtn.classList.add('dirty'); } }
+
+/* ---- undo / redo ---------------------------------------------------------
+   Snapshots are debounced so a burst of keystrokes collapses into one step,
+   which is also what drives the enabled/disabled state of the toolbar arrows. */
+const undoBtn = document.getElementById('undo-btn'), redoBtn = document.getElementById('redo-btn');
+let history = [], hpos = -1, hTimer = null, restoring = false;
+
+const snapshot = () => exprs.map(e => ({
+  latex: e.latex, color: e.color, min: e.min, max: e.max, val: e.val, visible: e.visible
+}));
+function syncUndoButtons() {
+  undoBtn.disabled = hpos <= 0;
+  redoBtn.disabled = hpos < 0 || hpos >= history.length - 1;
+}
+function pushHistory() {
+  const snap = snapshot();
+  if (hpos >= 0 && JSON.stringify(history[hpos]) === JSON.stringify(snap)) return;
+  history = history.slice(0, hpos + 1);
+  history.push(snap);
+  if (history.length > 250) history.shift();
+  hpos = history.length - 1;
+  syncUndoButtons();
+}
+function scheduleHistory() { clearTimeout(hTimer); hTimer = setTimeout(pushHistory, 450); }
+function restoreSnapshot(snap) {
+  restoring = true; clearTimeout(hTimer);
+  listEl.innerHTML = '';
+  exprs = snap.map(s => Object.assign(newExpr(s.latex), s));
+  focusedId = null;
+  render();                                   // builds fresh rows + math fields
+  exprs.forEach(e => { if (e.latex) e.mq.latex(e.latex); });
+  restoring = false;
+  recompute(); render(); draw(); syncUndoButtons();
+}
+undoBtn.onclick = () => { if (hpos > 0) restoreSnapshot(history[--hpos]); };
+redoBtn.onclick = () => { if (hpos < history.length - 1) restoreSnapshot(history[++hpos]); };
+document.addEventListener('keydown', ev => {
+  if (!(ev.ctrlKey || ev.metaKey)) return;
+  const k = ev.key.toLowerCase();
+  if (k === 'z' && !ev.shiftKey) { ev.preventDefault(); undoBtn.onclick(); }
+  else if (k === 'y' || (k === 'z' && ev.shiftKey)) { ev.preventDefault(); redoBtn.onclick(); }
+});
+function ensureTrailingBlank() {
+  if (!exprs.length || exprs[exprs.length - 1].latex.trim() !== '') exprs.push(newExpr(''));
+}
+
+function buildRow(e) {
+  const row = document.createElement('div');
+  row.className = 'expr-row'; row.dataset.id = e.id;
+
+  const idx = document.createElement('div'); idx.className = 'expr-index';
+  const num = document.createElement('div'); num.className = 'idx-num';
+  const ic1 = document.createElement('div'); ic1.className = 'idx-icon';
+  const ic2 = document.createElement('div'); ic2.className = 'idx-icon2';
+  idx.append(num, ic1, ic2); row.appendChild(idx);
+  ic1.addEventListener('mousedown', ev => { ev.preventDefault(); ev.stopPropagation();
+    if (e.kind === 'slider') return; e.visible = !e.visible; update(e); draw(); });
+
+  const body = document.createElement('div'); body.className = 'expr-body';
+  const mathHost = document.createElement('div'); mathHost.className = 'expr-math';
+  const span = document.createElement('span'); mathHost.appendChild(span); body.appendChild(mathHost);
+
+  /* slider */
+  const sl = document.createElement('div'); sl.className = 'slider-row';
+  const lo = document.createElement('div'); lo.className = 'sl-lim';
+  const track = document.createElement('div'); track.className = 'sl-track';
+  const tick = document.createElement('div'); tick.className = 'sl-tick';
+  const thumb = document.createElement('div'); thumb.className = 'sl-thumb';
+  track.append(tick, thumb);
+  const hi = document.createElement('div'); hi.className = 'sl-lim';
+  sl.append(lo, track, hi); body.appendChild(sl);
+
+  /* bounds editor */
+  const bd = document.createElement('div'); bd.className = 'bounds-row';
+  bd.innerHTML = `<input class="bf bmin"><span class="bsym">&le;</span><span class="bsym bvar"></span><span class="bsym">&le;</span><input class="bf bmax"><span class="bstep">Step:<input class="bf bstepf"></span>`;
+  body.appendChild(bd);
+  row.appendChild(body);
+
+  const del = document.createElement('button'); del.className = 'expr-del'; del.innerHTML = X_SVG;
+  del.addEventListener('mousedown', ev => { ev.preventDefault(); removeExpr(e); });
+  row.appendChild(del);
+
+  /* MathQuill field */
+  const mq = MQ.MathField(span, {
+    spaceBehavesLikeTab: false,
+    autoCommands: 'pi tau theta sqrt nthroot sum prod int alpha beta gamma delta lambda mu sigma phi omega',
+    autoOperatorNames: AUTO_OPS,
+    handlers: {
+      edit(f) {
+        if (restoring) return;
+        e.latex = f.latex(); markDirty(); analyze(e); recompute(); update(e); draw();
+        if (exprs[exprs.length - 1].latex.trim() !== '') { exprs.push(newExpr('')); render(); }
+        scheduleHistory();
+      },
+      enter() { const ne = newExpr(''); exprs.splice(exprs.indexOf(e) + 1, 0, ne); render(); focusExpr(ne); },
+      upOutOf() { const i = exprs.indexOf(e); if (i > 0) focusExpr(exprs[i - 1], true); },
+      downOutOf() { const i = exprs.indexOf(e); if (i < exprs.length - 1) focusExpr(exprs[i + 1]); },
+      deleteOutOf(dir) {
+        if (dir === MQ.L && !e.latex.trim() && exprs.length > 1) {
+          const i = exprs.indexOf(e); removeExpr(e);
+          const t = exprs[Math.max(0, i - 1)]; if (t) focusExpr(t, true);
+        }
+      }
+    }
+  });
+  e.mq = mq;
+  span.addEventListener('focusin', () => { focusedId = e.id; refreshFocusClasses(); });
+
+  row.addEventListener('mousedown', ev => {
+    if (ev.target.closest('.sl-track, .bf, .expr-del, .idx-icon, .idx-icon2')) return;
+    ev.preventDefault(); focusExpr(e, true);
+  });
+
+  /* slider drag */
+  let sdrag = false;
+  const setFromX = cx => {
+    const r = track.getBoundingClientRect();
+    let f = (cx - r.left) / r.width; f = Math.max(0, Math.min(1, f));
+    let v = e.min + f * (e.max - e.min);
+    v = Math.round(v * 100) / 100;
+    e.val = v;
+    if (e.sliderKind === 'var' && e.varName) userVars[e.varName] = v;
+    e.latex = (e.sliderLabel || 'a') + '=' + v; mq.latex(e.latex);
+    recompute(); update(e); draw(); markDirty(); scheduleHistory();
+  };
+  track.addEventListener('mousedown', ev => { sdrag = true; setFromX(ev.clientX); ev.preventDefault(); });
+  window.addEventListener('mousemove', ev => { if (sdrag) setFromX(ev.clientX); });
+  window.addEventListener('mouseup', () => { sdrag = false; });
+
+  /* bounds inputs */
+  bd.querySelector('.bmin').addEventListener('input', ev => { const v = parseFloat(ev.target.value); if (isFinite(v)) { e.min = v; update(e); } });
+  bd.querySelector('.bmax').addEventListener('input', ev => { const v = parseFloat(ev.target.value); if (isFinite(v)) { e.max = v; update(e); } });
+  bd.querySelector('.bstepf').addEventListener('input', ev => { e.step = ev.target.value; });
+
+  e.el = row; e.refs = { num, ic1, ic2, del, sl, lo, hi, thumb, tick, bd };
+  return row;
+}
+
+function update(e) {
+  const r = e.refs, i = exprs.indexOf(e);
+  r.num.textContent = i + 1;
+  e.el.classList.toggle('focused', e.id === focusedId);
+
+  const has = e.latex.trim() !== '';
+  r.del.classList.toggle('show', has);
+
+  const isVarDef = e.kind === 'slider';
+  const isGraph = GRAPHED.has(e.kind) && has && !e.err;
+  const hasSlider = has && !e.err && !!e.sliderKind;
+
+  const showErr = has && e.err;
+  r.ic1.classList.toggle('show', isGraph || isVarDef || showErr);
+  r.ic2.classList.toggle('show', isVarDef);
+  if (showErr) {
+    r.ic1.innerHTML = warnIcon();
+  } else if (isVarDef) {
+    r.ic1.innerHTML = playIcon(e.id === focusedId);
+    r.ic2.innerHTML = swapIcon(e.id === focusedId);
+  } else if (isGraph) {
+    r.ic1.innerHTML = curveIcon(e.color, e.visible);
+  }
+
+  const focused = e.id === focusedId;
+  r.sl.classList.toggle('show', hasSlider && !focused);
+  r.bd.classList.toggle('show', hasSlider && focused);
+  if (hasSlider) {
+    r.lo.textContent = e.min; r.hi.textContent = e.max;
+    const f = Math.max(0, Math.min(1, (e.val - e.min) / (e.max - e.min || 1)));
+    r.thumb.style.left = (f * 100) + '%';
+    r.tick.style.left = ((0 - e.min) / (e.max - e.min || 1) * 100) + '%';
+    r.bd.querySelector('.bvar').textContent = e.sliderLabel || '';
+  }
+}
+
+function render() {
+  ensureTrailingBlank();
+  exprs.forEach((e, i) => {
+    if (!e.el) buildRow(e);
+    if (listEl.children[i] !== e.el) listEl.insertBefore(e.el, listEl.children[i] || null);
+  });
+  [...listEl.children].forEach(c => { if (!exprs.some(e => e.el === c)) c.remove(); });
+  exprs.forEach(update);
+}
+function refreshFocusClasses() { exprs.forEach(update); }
+function focusExpr(e, toEnd) {
+  focusedId = e.id; selectedId = e.id;          // focusing a row selects its curve, as in Desmos
+  refreshFocusClasses(); e.mq.focus(); if (toEnd) e.mq.moveToRightEnd(); draw();
+}
+function removeExpr(e) {
+  if (exprs.length === 1) { e.latex = ''; e.mq.latex(''); analyze(e); }
+  else exprs.splice(exprs.indexOf(e), 1);
+  if (e.varName) delete userVars[e.varName];
+  markDirty(); recompute(); render(); draw(); pushHistory();
+}
+
+/* ------------------------- graph ------------------------- */
+const canvas = document.getElementById('graph'), ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+const view = { cx: 0, cy: 0, ppu: 58 };
+const toPX = m => (m - view.cx) * view.ppu + W / 2, toPY = m => H / 2 - (m - view.cy) * view.ppu;
+const toMX = p => (p - W / 2) / view.ppu + view.cx, toMY = p => (H / 2 - p) / view.ppu + view.cy;
+
+let DPR = 1, userMoved = false;
+
+/* snap a CSS-px coordinate to the centre of a physical pixel -> hairline stays crisp
+   at any devicePixelRatio / browser zoom level */
+const snapLine = v => (Math.round(v * DPR) + 0.5) / DPR;
+const snapEdge = v => Math.round(v * DPR) / DPR;
+
+function fitView() {
+  if (!W || !H) return;
+  // Desmos default framing: x spans exactly [-10, 10]; y follows from the aspect ratio.
+  view.ppu = W / 20;
+  view.cx = 0; view.cy = 0;
+}
+function resize() {
+  const wrap = document.getElementById('graph-wrap');
+  DPR = window.devicePixelRatio || 1;
+  W = wrap.clientWidth; H = wrap.clientHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (!userMoved) fitView();
+  draw();
+}
+
+/* Desmos-style tick selection: the labelled step lands on 1-2-5 x 10^k, and the
+   minor grid shows "quarter marks between your step value" -- i.e. always /4.
+   Target spacing measured off the reference captures: ~130 device px, which is
+   104 css px at the 1.25 dpr those were taken at. */
+function gridSteps() {
+  const raw = 104 / view.ppu;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / mag;
+  const m = n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10;
+  const major = m * mag;
+  return { major, minor: major / 4 };
+}
+function fmt(v, step) {
+  if (v === 0) return '0';
+  if (Math.abs(v) >= 1e6 || Math.abs(v) < 1e-4) return v.toExponential(1);
+  const d = Math.max(0, -Math.floor(Math.log10(step)) + 1);
+  return parseFloat(v.toFixed(Math.min(10, d))).toString();
+}
+function drawGrid() {
+  const { major, minor } = gridSteps();
+  const x0 = toMX(0), x1 = toMX(W), y0 = toMY(H), y1 = toMY(0);
+  const EPS = minor * 1e-6;
+  const isMajor = v => Math.abs(v / major - Math.round(v / major)) < 1e-6;
+
+  /* --- minor grid (every subdivision that is NOT a major line) --- */
+  ctx.lineWidth = 1 / DPR; ctx.strokeStyle = '#d7d7d7'; ctx.beginPath();
+  for (let i = Math.ceil(x0 / minor); i * minor <= x1 + EPS; i++) {
+    const v = i * minor; if (isMajor(v)) continue;
+    const p = snapLine(toPX(v)); ctx.moveTo(p, 0); ctx.lineTo(p, H);
+  }
+  for (let i = Math.ceil(y0 / minor); i * minor <= y1 + EPS; i++) {
+    const v = i * minor; if (isMajor(v)) continue;
+    const p = snapLine(toPY(v)); ctx.moveTo(0, p); ctx.lineTo(W, p);
+  }
+  ctx.stroke();
+
+  /* --- major grid (the labelled lines, a shade darker) --- */
+  ctx.lineWidth = 1 / DPR; ctx.strokeStyle = '#bfbfbf'; ctx.beginPath();
+  for (let i = Math.ceil(x0 / major); i * major <= x1 + EPS; i++) {
+    const p = snapLine(toPX(i * major)); ctx.moveTo(p, 0); ctx.lineTo(p, H);
+  }
+  for (let i = Math.ceil(y0 / major); i * major <= y1 + EPS; i++) {
+    const p = snapLine(toPY(i * major)); ctx.moveTo(0, p); ctx.lineTo(W, p);
+  }
+  ctx.stroke();
+
+  /* --- axes --- */
+  const ax = toPX(0), ay = toPY(0);
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2 / DPR; ctx.beginPath();
+  if (ax >= -1 && ax <= W + 1) { const p = snapEdge(ax); ctx.moveTo(p, 0); ctx.lineTo(p, H); }
+  if (ay >= -1 && ay <= H + 1) { const p = snapEdge(ay); ctx.moveTo(0, p); ctx.lineTo(W, p); }
+  ctx.stroke();
+
+  /* --- tick labels (clamped to the viewport when an axis is panned off-screen) --- */
+  ctx.font = '11.2px "Helvetica Neue", Helvetica, Arial, sans-serif';
+  ctx.fillStyle = '#3c3c3c'; ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2.8; ctx.lineJoin = 'round'; ctx.miterLimit = 2;
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const ly = Math.min(Math.max(ay + 4, 2), H - 15);
+  for (let i = Math.ceil(x0 / major); i * major <= x1 + EPS; i++) {
+    const v = i * major, s = fmt(v, major), p = toPX(v);
+    if (p < 11 || p > W - 11) continue;
+    ctx.strokeText(s, p, ly); ctx.fillText(s, p, ly);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const lx = Math.min(Math.max(ax - 5.5, 21), W - 3);
+  for (let i = Math.ceil(y0 / major); i * major <= y1 + EPS; i++) {
+    const v = i * major; if (Math.abs(v) < EPS) continue;          // 0 is labelled on the x-axis only
+    const s = fmt(v, major), p = toPY(v);
+    if (p < 7 || p > H - 7) continue;
+    ctx.strokeText(s, lx, p); ctx.fillText(s, lx, p);
+  }
+}
+function strokeExplicit(e, byX) {
+  const polys = []; let cur = null, prev = 0, lim = byX ? W : H;
+  for (let q = 0; q <= lim; q += .5) {
+    let a;
+    try { a = byX ? e.fn({ x: toMX(q), y: 0 }) : e.fn({ x: 0, y: toMY(q) }); } catch { a = NaN; }
+    if (!isFinite(a)) { cur = null; continue; }
+    const b = byX ? toPY(a) : toPX(a);
+    if (Math.abs(b) > 1e5) { cur = null; continue; }
+    if (cur && Math.abs(b - prev) > lim * 1.5) cur = null;      // asymptote break
+    if (!cur) { cur = []; polys.push(cur); }
+    cur.push(byX ? q : b, byX ? b : q);
+    prev = b;
+  }
+  e.path = polys;
+  strokePolys(e, polys);
+}
+function strokePolys(e, polys) {
+  ctx.strokeStyle = e.color;
+  ctx.lineWidth = e.id === selectedId ? 3.2 : 2;
+  ctx.lineJoin = ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (const p of polys) {
+    ctx.moveTo(p[0], p[1]);
+    for (let i = 2; i < p.length; i += 2) ctx.lineTo(p[i], p[i + 1]);
+  }
+  ctx.stroke();
+}
+function drawImplicit(e) {
+  const N = 240, x0 = toMX(0), x1 = toMX(W), y0 = toMY(H), y1 = toMY(0);
+  const dx = (x1 - x0) / N, dy = (y1 - y0) / N, g = new Float64Array((N + 1) * (N + 1)), s = { x: 0, y: 0 };
+  for (let j = 0; j <= N; j++) { s.y = y0 + j * dy;
+    for (let i = 0; i <= N; i++) { s.x = x0 + i * dx; let v; try { v = e.fn(s); } catch { v = NaN; }
+      g[j * (N + 1) + i] = isFinite(v) ? v : NaN; } }
+  const polys = [];
+  const P = (i, j) => g[j * (N + 1) + i];
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const a = P(i, j), b = P(i + 1, j), c = P(i + 1, j + 1), d = P(i, j + 1);
+    if (!isFinite(a) || !isFinite(b) || !isFinite(c) || !isFinite(d)) continue;
+    const pts = [];
+    if ((a < 0) !== (b < 0)) pts.push([x0 + (i + a / (a - b)) * dx, y0 + j * dy]);
+    if ((b < 0) !== (c < 0)) pts.push([x0 + (i + 1) * dx, y0 + (j + b / (b - c)) * dy]);
+    if ((d < 0) !== (c < 0)) pts.push([x0 + (i + d / (d - c)) * dx, y0 + (j + 1) * dy]);
+    if ((a < 0) !== (d < 0)) pts.push([x0 + i * dx, y0 + (j + a / (a - d)) * dy]);
+    for (let k = 0; k + 1 < pts.length; k += 2) {
+      polys.push([toPX(pts[k][0]), toPY(pts[k][1]), toPX(pts[k + 1][0]), toPY(pts[k + 1][1])]);
+    }
+  }
+  e.path = polys;
+  strokePolys(e, polys);
+}
+function draw() {
+  if (!W || !H) return;
+  const hb = document.getElementById('home-btn');
+  if (hb) hb.hidden = !userMoved;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  drawGrid();
+  for (const e of exprs) {
+    if (!e.fn || e.err || !e.visible || !e.latex.trim()) continue;
+    try {
+      if (e.kind === 'y' || e.kind === 'func') strokeExplicit(e, true);
+      else if (e.kind === 'x') strokeExplicit(e, false);
+      else if (e.kind === 'implicit') drawImplicit(e);
+      else if (e.kind === 'point') { const p = e.fn({}); if (Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])) {
+        ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(toPX(p[0]), toPY(p[1]), 5, 0, 7); ctx.fill(); } }
+    } catch (_) {}
+  }
+  if (selectedId != null) { computePOIs(); } else { pois = []; }
+  drawPOIs();
+  renderLabels();
+}
+
+/* =========================================================================
+   POINTS OF INTEREST + CURVE INTERACTION
+   Desmos surfaces intercepts, extrema, inflections and intersections as grey
+   dots on the selected curve; hovering reveals a label, clicking pins it.
+   ========================================================================= */
+let selectedId = null, poiDirty = true, pois = [], pins = [], hoverPt = null;
+
+const ORIENT = e => (e.kind === 'y' || e.kind === 'func') ? 'y' : e.kind === 'x' ? 'x' : null;
+const evalAt = (e, t) => {
+  try { const v = ORIENT(e) === 'y' ? e.fn({ x: t, y: 0 }) : e.fn({ x: 0, y: t }); return isFinite(v) ? v : NaN; }
+  catch { return NaN; }
+};
+
+/* bisection on a sign change -- 60 halvings gets us to double precision */
+function bisect(f, a, b) {
+  let fa = f(a);
+  for (let i = 0; i < 60; i++) {
+    const m = (a + b) / 2, fm = f(m);
+    if (!isFinite(fm)) return NaN;
+    if ((fa < 0) === (fm < 0)) { a = m; fa = fm; } else b = m;
+  }
+  return (a + b) / 2;
+}
+/* `eps` is a noise floor: sign flips where both samples are below it are
+   rounding artefacts, not real roots (a straight line's second difference
+   rattles around zero and would otherwise report inflections everywhere). */
+function scanRoots(f, a, b, N, out, make, eps = 0) {
+  const h = (b - a) / N;
+  let prev = f(a), pt = a;
+  for (let i = 1; i <= N; i++) {
+    const t = a + i * h, v = f(t);
+    if (v === 0) {
+      // a root exactly on a sample never produces a sign change, so record it
+      // directly -- but only if it is isolated, otherwise a flat-zero stretch
+      // would emit one "root" per sample
+      const nx = f(t + h);
+      if (prev !== 0 && nx !== 0 && isFinite(prev) && isFinite(nx)) out.push(make(t));
+    } else if (isFinite(prev) && isFinite(v) && prev !== 0 && (prev < 0) !== (v < 0)
+               && (Math.abs(prev) > eps || Math.abs(v) > eps)) {
+      const r = bisect(f, pt, t);
+      if (isFinite(r)) out.push(make(r));
+    }
+    prev = v; pt = t;
+  }
+}
+function computePOIs() {
+  pois = [];
+  const e = exprs.find(q => q.id === selectedId);
+  if (!e || !e.fn || e.err || !e.visible) return;
+  const o = ORIENT(e);
+  if (!o) return;                                    // implicit curves: not yet
+
+  const a = o === 'y' ? toMX(0) : toMY(H), b = o === 'y' ? toMX(W) : toMY(0);
+  const f = t => evalAt(e, t);
+  // step sizes for the finite differences: h^2 truncation vs eps/h cancellation.
+  // A one-pixel step biases the extrema of x^3-3x to +-0.99993 instead of +-1.
+  const dh1 = Math.max(1e-9, (b - a) * 1e-6);
+  const dh2 = Math.max(1e-6, (b - a) * 1e-4);
+  const d1 = t => (f(t + dh1) - f(t - dh1)) / (2 * dh1);
+  const d2 = t => (f(t + dh2) - 2 * f(t) + f(t - dh2)) / (dh2 * dh2);
+  const mk = ty => t => (o === 'y' ? { x: t, y: f(t), type: ty } : { x: f(t), y: t, type: ty });
+
+  // rough magnitude of f over the window, used to set the derivative noise floors
+  let fs = 1;
+  for (let i = 0; i <= 40; i++) {
+    const v = Math.abs(f(a + (b - a) * i / 40));
+    if (isFinite(v) && v > fs) fs = v;
+  }
+  const span = b - a;
+  const eps1 = 1e-6 * fs / span, eps2 = 1e-4 * fs / (span * span);
+
+  // ordered by importance -- the cap below trims the tail, not the useful points
+  scanRoots(f, a, b, 1400, pois, mk('intercept'));                       // axis crossings
+  if (a <= 0 && 0 <= b && isFinite(f(0))) {
+    const v = f(0);
+    pois.push(o === 'y' ? { x: 0, y: v, type: 'intercept' } : { x: v, y: 0, type: 'intercept' });
+  }
+  for (const g of exprs) {                                              // intersections
+    if (g === e || !g.fn || g.err || !g.visible || ORIENT(g) !== o) continue;
+    scanRoots(t => f(t) - evalAt(g, t), a, b, 1400, pois, mk('intersection'));
+  }
+  scanRoots(d1, a + dh1, b - dh1, 900, pois, mk('extremum'), eps1);      // maxima / minima
+  scanRoots(d2, a + dh2, b - dh2, 500, pois, mk('inflection'), eps2);
+
+  // drop anything off-screen or duplicated within a few pixels
+  const seen = [];
+  pois = pois.filter(p => {
+    if (!isFinite(p.x) || !isFinite(p.y)) return false;
+    const sx = toPX(p.x), sy = toPY(p.y);
+    if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) return false;
+    if (seen.some(q => Math.abs(q[0] - sx) < 4 && Math.abs(q[1] - sy) < 4)) return false;
+    seen.push([sx, sy]); return true;
+  }).slice(0, 80);
+}
+
+/* nearest point on any visible curve, in screen space */
+function pickCurve(mx, my, tol) {
+  let best = null;
+  for (const e of exprs) {
+    if (!e.path || !e.visible || e.err) continue;
+    for (const p of e.path) {
+      for (let i = 0; i + 1 < p.length; i += 2) {
+        const dx = p[i] - mx, dy = p[i + 1] - my, d = dx * dx + dy * dy;
+        if (d < tol * tol && (!best || d < best.d)) best = { d, e, sx: p[i], sy: p[i + 1] };
+      }
+    }
+  }
+  return best;
+}
+const pickPOI = (mx, my, tol) => {
+  let best = null;
+  for (const p of pois) {
+    const dx = toPX(p.x) - mx, dy = toPY(p.y) - my, d = dx * dx + dy * dy;
+    if (d < tol * tol && (!best || d < best.d)) best = { d, p };
+  }
+  return best && best.p;
+};
+
+/* pretty-print a coordinate, recognising simple multiples of pi like Desmos */
+function pretty(v) {
+  if (!isFinite(v)) return '∞';
+  if (Math.abs(v) < 1e-10) return '0';
+  for (const den of [1, 2, 3, 4, 6, 8, 12]) {
+    const n = Math.round(v * den / Math.PI);
+    if (n && Math.abs(v - n * Math.PI / den) < 1e-9 && Math.abs(n) <= 200) {
+      const c = n === 1 ? '' : n === -1 ? '-' : String(n);
+      return den === 1 ? c + 'π' : c + 'π/' + den;
+    }
+  }
+  const r = Math.round(v);
+  if (Math.abs(v - r) < 1e-9) return String(r);
+  return String(parseFloat(v.toPrecision(6)));
+}
+
+/* ---- label overlay (DOM, so the text stays crisp and can hold a button) ---- */
+const overlay = document.getElementById('graph-overlay');
+function renderLabels() {
+  overlay.innerHTML = '';
+  const items = pins.map(p => ({ p, pinned: true }));
+  if (hoverPt && !pins.some(q => Math.abs(q.x - hoverPt.x) < 1e-9 && Math.abs(q.y - hoverPt.y) < 1e-9))
+    items.push({ p: hoverPt, pinned: false });
+  for (const { p, pinned } of items) {
+    const el = document.createElement('div');
+    el.className = 'pt-label';
+    const txt = document.createElement('span');
+    txt.textContent = `(${pretty(p.x)}, ${pretty(p.y)})`;
+    el.appendChild(txt);
+    if (pinned) {
+      const btn = document.createElement('button');
+      btn.className = 'pt-export'; btn.title = 'Export point to expression list';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19V6a1.5 1.5 0 0 1 1.5-1.5H11"/><path d="M15 3.6h5.4V9"/><path d="M20.4 3.6L11.4 12.6"/></svg>';
+      btn.onmousedown = ev => { ev.preventDefault(); ev.stopPropagation(); exportPoint(p); };
+      el.appendChild(btn);
+    }
+    el.style.left = (toPX(p.x) + 14) + 'px';
+    el.style.top = (toPY(p.y) - 14) + 'px';
+    overlay.appendChild(el);
+  }
+}
+function exportPoint(p) {
+  const ne = newExpr(`\\left(${pretty(p.x).replace('π', '\\pi ')},${pretty(p.y).replace('π', '\\pi ')}\\right)`);
+  exprs.splice(exprs.length - 1, 0, ne);
+  render(); ne.mq.latex(ne.latex); recompute(); render(); draw(); pushHistory(); markDirty();
+}
+
+function drawPOIs() {
+  for (const p of pois) {
+    const sx = toPX(p.x), sy = toPY(p.y);
+    const hot = (hoverPt && hoverPt.x === p.x && hoverPt.y === p.y) ||
+                pins.some(q => q.x === p.x && q.y === p.y);
+    ctx.beginPath(); ctx.arc(sx, sy, hot ? 5.5 : 4.5, 0, 7);
+    ctx.fillStyle = hot ? '#000' : '#9d9d9d'; ctx.fill();
+  }
+  if (hoverPt && hoverPt.type === 'trace') {
+    ctx.beginPath(); ctx.arc(toPX(hoverPt.x), toPY(hoverPt.y), 5.5, 0, 7);
+    ctx.fillStyle = '#000'; ctx.fill();
+  }
+}
+
+/* ------------------------- interaction ------------------------- */
+let gdrag = false, lx = 0, ly = 0, downX = 0, downY = 0, gmoved = false;
+const local = ev => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
+const samePt = (a, b) => (!a && !b) || (a && b && a.x === b.x && a.y === b.y && a.type === b.type);
+
+function togglePin(p) {
+  const i = pins.findIndex(q => Math.abs(toPX(q.x) - toPX(p.x)) < 5 && Math.abs(toPY(q.y) - toPY(p.y)) < 5);
+  if (i >= 0) pins.splice(i, 1); else pins.push({ x: p.x, y: p.y, type: p.type });
+}
+
+/* nearest point on a specific curve -- no tolerance, so while dragging the
+   trace point stays glued to the curve even if the cursor wanders off it */
+function tracePoint(e, mx, my) {
+  const snap = pickPOI(mx, my, 12);
+  if (snap) return snap;
+  if (!e || !e.path) return null;
+  let best = null;
+  for (const p of e.path) {
+    for (let i = 0; i + 1 < p.length; i += 2) {
+      const dx = p[i] - mx, dy = p[i + 1] - my, d = dx * dx + dy * dy;
+      if (!best || d < best.d) best = { d, sx: p[i], sy: p[i + 1] };
+    }
+  }
+  return best ? { x: toMX(best.sx), y: toMY(best.sy), type: 'trace' } : null;
+}
+
+let mode = null, traceExpr = null;                 // 'pan' | 'trace' | null
+
+canvas.addEventListener('mousedown', ev => {
+  const [mx, my] = local(ev);
+  gmoved = false; downX = ev.clientX; downY = ev.clientY;
+
+  const poi = pickPOI(mx, my, 13);
+  const hit = poi ? null : pickCurve(mx, my, 10);
+  if (poi || hit) {                                // press on a curve starts a trace drag
+    mode = 'trace';
+    if (hit) {
+      traceExpr = hit.e; selectedId = hit.e.id; focusedId = hit.e.id; refreshFocusClasses();
+      hoverPt = { x: toMX(hit.sx), y: toMY(hit.sy), type: 'trace' };
+    } else {
+      traceExpr = exprs.find(q => q.id === selectedId);
+      hoverPt = poi;
+    }
+    canvas.style.cursor = 'pointer'; draw();
+    return;
+  }
+  mode = 'pan'; gdrag = true; lx = ev.clientX; ly = ev.clientY;
+});
+window.addEventListener('mousemove', ev => {
+  if (mode === 'trace') {
+    if (Math.abs(ev.clientX - downX) + Math.abs(ev.clientY - downY) >= 4) gmoved = true;
+    const [tx, ty] = local(ev);
+    const p = tracePoint(traceExpr, tx, ty);
+    if (p && !samePt(p, hoverPt)) { hoverPt = p; draw(); }
+    return;
+  }
+  if (gdrag) {
+    if (!gmoved && Math.abs(ev.clientX - downX) + Math.abs(ev.clientY - downY) < 4) return;
+    gmoved = true; userMoved = true; canvas.style.cursor = 'move';
+    view.cx -= (ev.clientX - lx) / view.ppu; view.cy += (ev.clientY - ly) / view.ppu;
+    lx = ev.clientX; ly = ev.clientY; draw();
+    return;
+  }
+  const [mx, my] = local(ev);
+  if (mx < 0 || my < 0 || mx > W || my > H) {
+    if (hoverPt) { hoverPt = null; draw(); }
+    return;
+  }
+  let np = pickPOI(mx, my, 13);
+  if (!np) {
+    const hit = pickCurve(mx, my, 10);
+    if (hit) np = { x: toMX(hit.sx), y: toMY(hit.sy), type: 'trace' };
+  }
+  canvas.style.cursor = np ? 'pointer' : 'default';
+  if (!samePt(np, hoverPt)) { hoverPt = np; draw(); }
+});
+window.addEventListener('mouseup', () => {
+  if (mode === 'trace') {
+    // a plain click toggles the point; a drag always leaves one behind
+    if (hoverPt) {
+      if (!gmoved) togglePin(hoverPt);
+      else if (!pins.some(q => Math.abs(toPX(q.x) - toPX(hoverPt.x)) < 5 &&
+                               Math.abs(toPY(q.y) - toPY(hoverPt.y)) < 5))
+        pins.push({ x: hoverPt.x, y: hoverPt.y, type: hoverPt.type });
+    }
+    mode = null; traceExpr = null; canvas.style.cursor = 'default'; draw();
+    return;
+  }
+  if (mode === 'pan') {
+    mode = null; gdrag = false; canvas.style.cursor = 'default';
+    if (!gmoved) { selectedId = null; pins = []; hoverPt = null; draw(); }   // empty click clears
+  }
+});
+canvas.addEventListener('wheel', ev => {
+  ev.preventDefault(); userMoved = true;
+  const r = canvas.getBoundingClientRect(), px = ev.clientX - r.left, py = ev.clientY - r.top;
+  const mx = toMX(px), my = toMY(py);
+  view.ppu = Math.max(1e-6, Math.min(1e7, view.ppu * Math.pow(1.0015, -ev.deltaY)));
+  view.cx = mx - (px - W / 2) / view.ppu; view.cy = my + (py - H / 2) / view.ppu; draw();
+}, { passive: false });
+document.getElementById('zoom-in').onclick = () => { userMoved = true; view.ppu *= 1.35; draw(); };
+document.getElementById('zoom-out').onclick = () => { userMoved = true; view.ppu /= 1.35; draw(); };
+canvas.addEventListener('dblclick', () => { userMoved = false; fitView(); draw(); });
+
+/* the home button only exists once the view has left the default framing */
+const homeBtn = document.getElementById('home-btn');
+homeBtn.onclick = () => { userMoved = false; fitView(); draw(); };
+document.getElementById('add-btn').onclick = () => { const e = newExpr(''); exprs.push(e); render(); focusExpr(e); };
+document.getElementById('toast-close').onclick = () => document.getElementById('login-toast').style.display = 'none';
+document.getElementById('collapse-btn').onclick = () => {
+  document.getElementById('panel').classList.toggle('collapsed'); requestAnimationFrame(resize);
+};
+
+const resizer = document.getElementById('resizer'), panel = document.getElementById('panel');
+let rz = false;
+resizer.addEventListener('mousedown', e => { rz = true; e.preventDefault(); document.body.style.cursor = 'col-resize'; });
+window.addEventListener('mousemove', e => { if (!rz) return;
+  const w = Math.max(192, Math.min(Math.round(window.innerWidth * 0.68), e.clientX));
+  panel.style.width = w + 'px'; });
+window.addEventListener('mouseup', () => { if (rz) { rz = false; document.body.style.cursor = ''; } });
+
+/* the canvas tracks its own box, so window resizes, panel drags and panel
+   collapse all reflow through one code path */
+new ResizeObserver(() => resize()).observe(document.getElementById('graph-wrap'));
+window.addEventListener('resize', resize);
+
+/* ------------------------- boot ------------------------- */
+exprs = [newExpr('')];
+focusedId = exprs[0].id;
+render(); resize(); focusExpr(exprs[0]); pushHistory();
+</script>
+</body>
+</html>
