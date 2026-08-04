@@ -124,7 +124,8 @@
   --index-width: 37.6px;
   --index-num-left: 4px;
   --index-num-top: 2.4px;
-  --index-icon-size: 24px;
+  /* Desmos's expression disc, measured live. */
+  --index-icon-size: 29px;
   --index-icon-top: 15.2px;
   --index-icon2-size: 20.8px;
   --index-icon2-top: 49.6px;

@@ -8,7 +8,7 @@ import { createMathField } from './MathField.ts';
 import type { MathFieldHandle } from './MathField.ts';
 import { createSlider } from './Slider.ts';
 import type { SliderRow } from './Slider.ts';
-import { curveIcon, deleteIcon, playIcon, swapIcon, warnIcon } from './icons.ts';
+import { curveIcon, deleteIcon, playIcon, pointIcon, swapIcon, warnIcon } from './icons.ts';
 import { GRAPHED_KINDS } from '../core/lang/analyze.ts';
 import type { Analysis } from '../core/lang/analyze.ts';
 import type { Expression } from '../state/document.ts';
@@ -132,7 +132,11 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
         icon.innerHTML = playIcon(focused);
         icon2.innerHTML = swapIcon(focused);
       } else if (isGraphed) {
-        icon.innerHTML = curveIcon(expression.colour ?? '#000', expression.visible);
+        // Desmos uses a different glyph per kind, and both track the expression's style.
+        const colour = expression.colour ?? '#000';
+        icon.innerHTML = kind === 'point'
+          ? pointIcon(colour, expression.visible, expression.pointStyle)
+          : curveIcon(colour, expression.visible, expression.lineStyle);
       }
 
       slider.update({

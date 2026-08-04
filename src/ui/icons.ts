@@ -3,6 +3,9 @@
 // Kept verbatim from the prototype, including the fractional stroke widths and path coordinates
 // — these were traced against Desmos captures and small changes are visible at 100% zoom.
 
+import { dashPattern } from '../state/document.ts';
+import type { LineStyle, PointStyle } from '../state/document.ts';
+
 export const openGraphIcon = `
 <svg width="20" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
   <path d="M2.6 18.6V5.4A1.4 1.4 0 0 1 4 4h4.4l1.9 2.2H15.8a1.4 1.4 0 0 1 1.4 1.4v1.5"/>
@@ -100,19 +103,116 @@ export const exportPointIcon = `
   <path d="M15 3.6h5.4V9"/><path d="M20.4 3.6L11.4 12.6"/>
 </svg>`;
 
+// ── Expression icons ─────────────────────────────────────────────────────────────────────────
+//
+// Desmos renders these as a 29px disc filled with the expression colour, no border, carrying a
+// white glyph from a private icon font (`dcg-icon-parametric-solid`, `dcg-icon-point-closed`).
+// The font is not ours to use, so the glyphs are redrawn as SVG at the same weights.
+//
+// The glyph name is the tell that the icon tracks line style: there is a `-solid` variant, so
+// there are dashed and dotted ones too. `curveIcon` dashes the wave to match the curve.
+
+
+/** Disc diameter in css pixels, measured on live desmos.com. */
+export const ICON_DISC_SIZE = 29;
+
+/** Stroke weight of the wave inside the 30-unit icon viewBox. */
+const WAVE_WIDTH = 2.8;
+
+/** Hidden expressions invert: white disc, coloured glyph, grey ring. */
+const HIDDEN_RING = '#c4c4c4';
+
+const dashAttr = (style: LineStyle): string => {
+  const pattern = dashPattern(style, WAVE_WIDTH);
+  return pattern.length ? ` stroke-dasharray="${pattern.join(' ')}"` : '';
+};
+
 /**
- * The visibility toggle in the index cell.
+ * The visibility toggle in the index cell, for anything drawn as a curve.
  *
- * Desmos draws a solid disc in the expression's colour with the wave knocked out in white.
- * Hidden expressions invert it: white disc, coloured wave and ring.
+ * Desmos fills the disc with the expression colour and knocks the wave out in white. Hidden
+ * expressions invert it: white disc, coloured wave and a grey ring so the disc still reads as a
+ * disc against the white row.
  */
-export function curveIcon(colour: string, visible: boolean): string {
+export function curveIcon(colour: string, visible: boolean, lineStyle: LineStyle = 'SOLID'): string {
+  const disc = visible
+    ? `<circle cx="15" cy="15" r="15" fill="${colour}"/>`
+    : `<circle cx="15" cy="15" r="14.3" fill="#fff" stroke="${HIDDEN_RING}" stroke-width="1.4"/>`;
   return `<svg viewBox="0 0 30 30" width="100%" height="100%">
-    <circle cx="15" cy="15" r="14.3" fill="${visible ? colour : '#fff'}" stroke="${visible ? colour : '#c4c4c4'}" stroke-width="1.4"/>
+    ${disc}
     <path d="M5 20.2c2.1-10.6 4.9-10.6 7 0s4.9 10.6 7 0 4.6-9.6 5.9-4.4"
-      fill="none" stroke="${visible ? '#fff' : colour}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+      fill="none" stroke="${visible ? '#fff' : colour}" stroke-width="${WAVE_WIDTH}"
+      stroke-linecap="round" stroke-linejoin="round"${dashAttr(lineStyle)}/>
   </svg>`;
 }
+
+/** The marker glyphs, drawn white-on-colour inside the disc. Sized to Desmos's 19.25px glyph. */
+function markerPath(style: PointStyle, ink: string): string {
+  const c = 15;
+  const r = 6.2;
+  const w = 2.4;
+  const poly = (n: number, radius: number, rotate = -Math.PI / 2): string =>
+    Array.from({ length: n }, (_, i) => {
+      const a = rotate + (i * 2 * Math.PI) / n;
+      return `${(c + radius * Math.cos(a)).toFixed(2)},${(c + radius * Math.sin(a)).toFixed(2)}`;
+    }).join(' ');
+
+  switch (style) {
+    case 'POINT':
+      return `<circle cx="${c}" cy="${c}" r="${r}" fill="${ink}"/>`;
+    case 'OPEN':
+      return `<circle cx="${c}" cy="${c}" r="${r - w / 2}" fill="none" stroke="${ink}" stroke-width="${w}"/>`;
+    case 'CROSS':
+      return `<path d="M${c - r},${c - r}L${c + r},${c + r}M${c + r},${c - r}L${c - r},${c + r}"
+        stroke="${ink}" stroke-width="${w}" stroke-linecap="round" fill="none"/>`;
+    case 'PLUS':
+      return `<path d="M${c - r},${c}L${c + r},${c}M${c},${c - r}L${c},${c + r}"
+        stroke="${ink}" stroke-width="${w}" stroke-linecap="round" fill="none"/>`;
+    case 'SQUARE':
+      return `<rect x="${c - r * 0.9}" y="${c - r * 0.9}" width="${r * 1.8}" height="${r * 1.8}" fill="${ink}"/>`;
+    case 'DIAMOND':
+      return `<polygon points="${poly(4, r * 1.15)}" fill="${ink}"/>`;
+    case 'TRIANGLE':
+      return `<polygon points="${poly(3, r * 1.2)}" fill="${ink}"/>`;
+    case 'STAR': {
+      const pts = Array.from({ length: 10 }, (_, i) => {
+        const radius = i % 2 === 0 ? r * 1.2 : r * 0.48;
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        return `${(c + radius * Math.cos(a)).toFixed(2)},${(c + radius * Math.sin(a)).toFixed(2)}`;
+      }).join(' ');
+      return `<polygon points="${pts}" fill="${ink}"/>`;
+    }
+    default: {
+      const never: never = style;
+      return never;
+    }
+  }
+}
+
+/** The visibility toggle for a point expression. */
+export function pointIcon(colour: string, visible: boolean, pointStyle: PointStyle = 'POINT'): string {
+  const disc = visible
+    ? `<circle cx="15" cy="15" r="15" fill="${colour}"/>`
+    : `<circle cx="15" cy="15" r="14.3" fill="#fff" stroke="${HIDDEN_RING}" stroke-width="1.4"/>`;
+  return `<svg viewBox="0 0 30 30" width="100%" height="100%">
+    ${disc}
+    ${markerPath(pointStyle, visible ? '#fff' : colour)}
+  </svg>`;
+}
+
+/** A bare swatch for the style tray: the colour with no glyph. */
+export const colourSwatch = (colour: string, selected: boolean): string =>
+  `<svg viewBox="0 0 30 30" width="100%" height="100%">
+    <circle cx="15" cy="15" r="${selected ? 12.5 : 15}" fill="${colour}"/>
+    ${selected ? `<circle cx="15" cy="15" r="14" fill="none" stroke="${colour}" stroke-width="2"/>` : ''}
+  </svg>`;
+
+/** A line-style preview for the style tray: a short rule in the given style. */
+export const lineStyleSwatch = (style: LineStyle, colour: string): string =>
+  `<svg viewBox="0 0 34 16" width="100%" height="100%">
+    <path d="M2 8H32" stroke="${colour}" stroke-width="3" stroke-linecap="round"
+      ${dashPattern(style, 3).length ? `stroke-dasharray="${dashPattern(style, 3).join(' ')}"` : ''}/>
+  </svg>`;
 
 /** The structural-error marker. Numeric errors never show this. */
 export function warnIcon(): string {

@@ -16,6 +16,8 @@
 //
 // Everything present is live: each control drives something the renderer or evaluator honours.
 
+import { createMathField } from './MathField.ts';
+import type { MathFieldHandle } from './MathField.ts';
 import type { AngleMode } from '../core/lang/scope.ts';
 import type { AxisOptions } from '../graph/axes.ts';
 
@@ -34,6 +36,14 @@ export interface Bounds {
 export interface SettingsPanelCallbacks {
   onChange(patch: Partial<SettingsValues>): void;
   onBoundsChange(patch: Partial<Bounds>): void;
+  /**
+   * Evaluate a LaTeX fragment to a number, or NaN.
+   *
+   * Injected rather than imported so the panel stays clear of core/, and so the expression is
+   * evaluated against the document's own scope — which is what lets a bound reference a slider
+   * variable, not just a literal.
+   */
+  evaluateLatex(latex: string): number;
 }
 
 export interface SettingsPanel {
@@ -68,6 +78,29 @@ function checkbox(
   text.textContent = label;
   row.append(input, text);
   return { row, input };
+}
+
+/**
+ * A MathQuill field that reports a number.
+ *
+ * Desmos's axis bounds and step are full math inputs — the screenshot that prompted this shows
+ * `-e^3 <= y <= 4pi` and `Step: pi`. A plain number input cannot express that, so these are real
+ * math fields and the value is whatever the document's evaluator makes of them.
+ */
+function mathField(
+  cls: string,
+  evaluate: (latex: string) => number,
+  onValue: (value: number, latex: string) => void,
+): { wrap: HTMLElement; handle: MathFieldHandle } {
+  const wrap = document.createElement('div');
+  wrap.className = `set-field set-mathfield ${cls}`;
+  const handle = createMathField(wrap, {
+    edit: (field) => {
+      const latex = field.latex();
+      onValue(evaluate(latex), latex);
+    },
+  });
+  return { wrap, handle };
 }
 
 function textField(cls: string, placeholder: string, onInput: (value: string) => void): HTMLInputElement {
@@ -118,22 +151,21 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
     title.className = 'set-axis-title';
     title.append(visible.row, label);
 
-    const commitBound = (which: 'min' | 'max') => (raw: string): void => {
-      const v = parseFloat(raw);
+    const commitBound = (which: 'min' | 'max') => (v: number): void => {
       if (!isFinite(v)) return;                     // a half-typed "-" must not collapse the view
       if (isX) callbacks.onBoundsChange(which === 'min' ? { xmin: v } : { xmax: v });
       else callbacks.onBoundsChange(which === 'min' ? { ymin: v } : { ymax: v });
     };
-    const min = textField('set-bound', '', commitBound('min'));
-    const max = textField('set-bound', '', commitBound('max'));
+    const min = mathField('set-bound', callbacks.evaluateLatex, commitBound('min'));
+    const max = mathField('set-bound', callbacks.evaluateLatex, commitBound('max'));
 
     const sym = document.createElement('span');
     sym.className = 'set-sym';
     sym.innerHTML = `&le;<i>${axis}</i>&le;`;
 
-    const step = textField('', '', (raw) => {
-      const v = parseFloat(raw);
-      // Empty or unparseable returns to the automatic 1-2-5 selection rather than erroring.
+    const step = mathField('set-stepfield', callbacks.evaluateLatex, (v) => {
+      // Empty or unparseable returns to the automatic 1-2-5 selection rather than erroring, so
+      // clearing the field is how you go back to the 1-2-5 grid.
       const value = isFinite(v) && v > 0 ? v : null;
       callbacks.onChange(isX ? { xAxisStep: value } : { yAxisStep: value });
     });
@@ -142,11 +174,11 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
     const stepLabel = document.createElement('span');
     stepLabel.className = 'set-step-label';
     stepLabel.textContent = 'Step:';
-    stepWrap.append(stepLabel, step);
+    stepWrap.append(stepLabel, step.wrap);
 
     const range = document.createElement('div');
     range.className = 'set-range';
-    range.append(min, sym, max, stepWrap);
+    range.append(min.wrap, sym, max.wrap, stepWrap);
 
     const block = section(title, range);
     block.classList.add('set-axis');
@@ -183,6 +215,12 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
     if (document.activeElement !== input) input.value = value;
   };
 
+  /** Same guard for a math field, whose focus lives on a textarea inside it. */
+  const setMathIfNotFocused = (field: { wrap: HTMLElement; handle: MathFieldHandle }, latex: string): void => {
+    if (field.wrap.contains(document.activeElement)) return;
+    field.handle.setLatexQuietly(latex);
+  };
+
   return {
     element,
     get isOpen() {
@@ -213,14 +251,15 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
 
       setIfNotFocused(xAxis.label, values.xAxisLabel);
       setIfNotFocused(yAxis.label, values.yAxisLabel);
-      setIfNotFocused(xAxis.step, values.xAxisStep === null ? '' : String(values.xAxisStep));
-      setIfNotFocused(yAxis.step, values.yAxisStep === null ? '' : String(values.yAxisStep));
+      setMathIfNotFocused(xAxis.step, values.xAxisStep === null ? '' : String(values.xAxisStep));
+      setMathIfNotFocused(yAxis.step, values.yAxisStep === null ? '' : String(values.yAxisStep));
 
+      // Six significant figures, matching what Desmos shows for a panned viewport.
       const round = (v: number): string => String(parseFloat(v.toPrecision(6)));
-      setIfNotFocused(xAxis.min, round(bounds.xmin));
-      setIfNotFocused(xAxis.max, round(bounds.xmax));
-      setIfNotFocused(yAxis.min, round(bounds.ymin));
-      setIfNotFocused(yAxis.max, round(bounds.ymax));
+      setMathIfNotFocused(xAxis.min, round(bounds.xmin));
+      setMathIfNotFocused(xAxis.max, round(bounds.xmax));
+      setMathIfNotFocused(yAxis.min, round(bounds.ymin));
+      setMathIfNotFocused(yAxis.max, round(bounds.ymax));
 
       for (const { mode, el } of angleButtons) el.classList.toggle('selected', mode === values.angleMode);
     },

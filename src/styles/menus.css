@@ -160,3 +160,25 @@
   border-color: var(--seg-selected-bg);
   color: var(--c-chrome-text);
 }
+
+/* ---- math fields in the panel ----
+ * Desmos's bounds and step are MathQuill inputs, not number fields, so they accept things like
+ * pi, 4pi and e^3. The wrapper carries the border; the field inside is stripped bare.
+ */
+.set-mathfield {
+  display: flex; align-items: center;
+  min-height: calc(var(--fs-settings-input) + 2 * var(--settings-input-pad));
+  overflow: hidden;
+  cursor: text;
+}
+.set-mathfield .mq-editable-field,
+.set-mathfield .mq-math-mode {
+  border: 0 !important; box-shadow: none !important; outline: none !important;
+  width: 100%;
+  font-size: var(--fs-settings-axis);
+}
+.set-mathfield .mq-root-block { padding: 0; }
+.set-mathfield:focus-within { border-color: var(--c-blue); }
+
+.set-range .set-bound.set-mathfield { flex: 1 1 0; min-width: 0; justify-content: center; }
+.set-stepfield { width: var(--settings-step-w); flex: 0 0 var(--settings-step-w); }

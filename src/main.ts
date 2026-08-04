@@ -9,7 +9,10 @@ import './styles/expressions.css';
 import './styles/graph.css';
 import './styles/menus.css';
 
-import { coordinateToLatex } from './core/lang/latex.ts';
+import { compile } from './core/eval/compile.ts';
+import { asScalar } from './core/eval/backend.ts';
+import { coordinateToLatex, latexToSource } from './core/lang/latex.ts';
+import { parseSource } from './core/lang/parse.ts';
 import { computePointsOfInterest, formatCoordinate, orientationOf } from './core/poi.ts';
 import type { POI, POICurve } from './core/poi.ts';
 import { Renderer } from './graph/renderer.ts';
@@ -73,6 +76,17 @@ async function boot(): Promise<void> {
       view.setBounds(patch);
       draw();
     },
+    // The panel's bounds and step are full math fields, so "pi", "4pi" and "e^3" all work, and
+    // they resolve against the document scope — a bound may reference a slider variable.
+    evaluateLatex: (latex) => {
+      const src = latexToSource(latex).trim();
+      if (!src) return NaN;
+      try {
+        return asScalar(compile(parseSource(src))({ x: 0, y: 0 }, store.scope));
+      } catch {
+        return NaN;
+      }
+    },
   });
   shell.graph.mountOverlay(settingsPanel.element);
 
@@ -114,6 +128,10 @@ async function boot(): Promise<void> {
         colour: e.colour ?? '#000',
         visible: true,
         fn: analysis.fn,
+        lineStyle: e.lineStyle,
+        pointStyle: e.pointStyle,
+        lineWidth: e.lineWidth,
+        pointSize: e.pointSize,
       });
     }
     return out;

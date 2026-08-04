@@ -17,9 +17,12 @@ import type { ExpressionKind } from '../core/lang/analyze.ts';
 import type { Scope } from '../core/lang/scope.ts';
 import { orientationOf } from '../core/poi.ts';
 import type { POI } from '../core/poi.ts';
+import { DEFAULT_LINE_WIDTH, DEFAULT_POINT_SIZE, dashPattern } from '../state/document.ts';
+import type { LineStyle, PointStyle } from '../state/document.ts';
 
-export const CURVE_WIDTH = 2;
-export const CURVE_WIDTH_SELECTED = 3.2;
+export const CURVE_WIDTH = DEFAULT_LINE_WIDTH;
+/** A selected curve is drawn thicker so the trace target is obvious. */
+export const SELECTED_WIDTH_FACTOR = 1.6;
 export const POI_RADIUS = 4.5;
 export const POI_RADIUS_HOT = 5.5;
 export const POI_COLOUR = '#9d9d9d';
@@ -32,6 +35,11 @@ export interface Drawable {
   readonly colour: string;
   readonly visible: boolean;
   readonly fn: Compiled;
+  readonly lineStyle: LineStyle;
+  readonly pointStyle: PointStyle;
+  /** null means the default. */
+  readonly lineWidth: number | null;
+  readonly pointSize: number | null;
 }
 
 export interface Scene {
@@ -124,9 +132,9 @@ export class Renderer {
       const strokeStart = performance.now();
       if (paths) {
         this.paths.set(d.id, paths);
-        this.strokePaths(paths, d.colour, d.id === scene.selectedId);
+        this.strokePaths(paths, d, d.id === scene.selectedId);
       } else if (point) {
-        drawPoint(ctx, point, d.colour);
+        drawPoint(ctx, point, d.colour, d.pointStyle, d.pointSize ?? DEFAULT_POINT_SIZE);
       }
       drawMs += performance.now() - strokeStart;
     }
@@ -138,12 +146,15 @@ export class Renderer {
     return { plotMs, drawMs };
   }
 
-  private strokePaths(paths: readonly Polyline[], colour: string, selected: boolean): void {
+  private strokePaths(paths: readonly Polyline[], d: Drawable, selected: boolean): void {
     const { ctx } = this;
-    ctx.strokeStyle = colour;
-    ctx.lineWidth = selected ? CURVE_WIDTH_SELECTED : CURVE_WIDTH;
+    const width = (d.lineWidth ?? CURVE_WIDTH) * (selected ? SELECTED_WIDTH_FACTOR : 1);
+    ctx.strokeStyle = d.colour;
+    ctx.lineWidth = width;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
+    // Dash lengths are proportional to the stroke, so a thicker curve keeps the same rhythm.
+    ctx.setLineDash(dashPattern(d.lineStyle, width));
     ctx.beginPath();
     for (const path of paths) {
       if (path.length < 2) continue;
@@ -153,6 +164,7 @@ export class Renderer {
       }
     }
     ctx.stroke();
+    ctx.setLineDash([]);          // never leak a dash into the next thing drawn
   }
 
   private drawPOIs(scene: Scene): void {

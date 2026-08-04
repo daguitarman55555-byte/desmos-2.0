@@ -5,15 +5,72 @@
 // without dragging the renderer along. They now live in side tables keyed by expression id —
 // analyses in state/store.ts, DOM in ui/ExpressionRow.ts, paths in graph/renderer.ts.
 
-/** Desmos's colour cycle, in order. */
-export const COLOURS: readonly string[] = [
-  '#c74440', // red
+/**
+ * The colours Desmos assigns automatically, in cycle order.
+ *
+ * Measured from live desmos.com via the Calc API across fourteen consecutive expressions: the
+ * cycle is exactly these five and repeats. Orange is NOT among them — it exists in the palette
+ * and the style picker, but nothing is ever auto-assigned orange.
+ */
+export const COLOUR_CYCLE: readonly string[] = [
+  '#c74440', // red    — a blank document's first row already holds this
   '#2d70b3', // blue
   '#388c46', // green
   '#6042a6', // purple
   '#000000', // black
-  '#fa7e19', // orange
 ];
+
+/**
+ * The named palette offered by the style picker, from `Desmos.Colors`.
+ *
+ * Note the green: the picker's GREEN is #348543, while the auto-cycle uses #388c46. They are
+ * genuinely different values in Desmos, not a transcription slip — do not "unify" them.
+ */
+export const PALETTE: Readonly<Record<string, string>> = {
+  RED: '#c74440',
+  BLUE: '#2d70b3',
+  GREEN: '#348543',
+  ORANGE: '#fa7e19',
+  PURPLE: '#6042a6',
+  BLACK: '#000000',
+};
+
+/** Kept as the old name so existing call sites and tests continue to read naturally. */
+export const COLOURS = COLOUR_CYCLE;
+
+/** Stroke styles, matching Desmos.Styles. */
+export type LineStyle = 'SOLID' | 'DASHED' | 'DOTTED';
+
+/** Point marker styles, matching Desmos.Styles. */
+export type PointStyle =
+  | 'POINT' | 'OPEN' | 'CROSS' | 'PLUS'
+  | 'SQUARE' | 'DIAMOND' | 'STAR' | 'TRIANGLE';
+
+export const LINE_STYLES: readonly LineStyle[] = ['SOLID', 'DASHED', 'DOTTED'];
+export const POINT_STYLES: readonly PointStyle[] = [
+  'POINT', 'OPEN', 'CROSS', 'PLUS', 'SQUARE', 'DIAMOND', 'STAR', 'TRIANGLE',
+];
+
+/** Default stroke width in css pixels, and the width the dash patterns are quoted against. */
+export const DEFAULT_LINE_WIDTH = 2.5;
+export const DEFAULT_POINT_SIZE = 9;
+
+/**
+ * Dash patterns, in css pixels, as multiples of the stroke width.
+ *
+ * Measured off Desmos's own canvas by scanning a pixel row across `y=1` at line widths 2 and 4
+ * and reading the ink/gap run lengths. Both widths fit these ratios, so the pattern is
+ * proportional to the stroke rather than fixed.
+ */
+export const DASH_PATTERNS: Readonly<Record<LineStyle, readonly number[]>> = {
+  SOLID: [],
+  DASHED: [5.5, 2],
+  DOTTED: [2, 1.25],
+};
+
+/** Resolve a dash pattern to css pixels for a given stroke width. */
+export const dashPattern = (style: LineStyle, width: number): number[] =>
+  DASH_PATTERNS[style].map((m) => m * width);
 
 export interface Expression {
   readonly id: number;
@@ -24,6 +81,11 @@ export interface Expression {
    */
   colour: string | null;
   visible: boolean;
+  lineStyle: LineStyle;
+  pointStyle: PointStyle;
+  /** Empty string means "use the default", matching Desmos's own model. */
+  lineWidth: number | null;
+  pointSize: number | null;
   /** Slider bounds and current value. */
   min: number;
   max: number;
@@ -94,7 +156,12 @@ export interface GraphDocument {
 }
 
 export function createExpression(id: number, latex = ''): Expression {
-  return { id, latex, colour: null, visible: true, min: -10, max: 10, step: '', val: 0 };
+  return {
+    id, latex, colour: null, visible: true,
+    lineStyle: 'SOLID', pointStyle: 'POINT',
+    lineWidth: null, pointSize: null,
+    min: -10, max: 10, step: '', val: 0,
+  };
 }
 
 export const isBlank = (e: Expression): boolean => e.latex.trim() === '';
