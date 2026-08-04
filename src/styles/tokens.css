@@ -12,7 +12,8 @@
  * a stylesheet and adds toolbar buttons, so any measurement taken with it installed is void —
  * the values below were each confirmed in a clean profile. Where the frozen prototype and live
  * Desmos disagree, live Desmos now wins, which means reference/desmos-demo.html is no longer
- * the pixel baseline. Retuned so far: --h-topbar, --c-chrome-bg, --fs-math, --row-min-height.
+ * the pixel baseline. Retuned so far: --h-topbar, --c-chrome-bg, --fs-math, --row-min-height,
+ * --expr-math-min-height, --panel-width.
  *
  * Theme is light only. The palette lives here as variables so a dark theme is a drop-in later
  * rather than a rewrite.
@@ -103,7 +104,11 @@
   --wordmark-tracking: 0.96px;
 
   /* ── Panel ───────────────────────────────────────────────────────────── */
-  --panel-width: 466.4px;
+  /* Measured on live desmos.com in a clean browser: an explicit 448px, with the graph pane
+   * starting at exactly 448. DesModder reports 467.2 because it widens the panel itself —
+   * that reading is void. The prototype's 466.4 was calibrated against it or against an
+   * older build. */
+  --panel-width: 448px;
   --panel-min-width: 192px;
   --panel-max-width: 68%;
   --h-panel-toolbar: 51.2px;
