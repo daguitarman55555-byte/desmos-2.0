@@ -405,6 +405,67 @@
   height: var(--sty-check); width: 100%;
 }
 
+/* ---- a section's two columns ----
+ * Desmos's `.dcg-options-flex-container`: the opacity and width/size fields down the left, the
+ * style buttons on the right. The left column takes the slack (`flex: 1 1 0`), so the buttons
+ * keep their measured size and the fields absorb whatever is left of the 200px.
+ */
+.sty-flex {
+  display: flex;
+  max-width: var(--sty-flex-max-width);
+  padding-top: var(--sty-flex-pad-top);
+}
+.sty-flex[hidden] { display: none; }
+.sty-left { flex: 1 1 0; min-width: 0; }
+.sty-right { flex: 0 0 auto; }
+
+.sty-field-row {
+  padding: var(--sty-field-row-pad);
+  display: flex; align-items: flex-start;
+}
+.sty-field-icon {
+  flex: 0 0 var(--sty-field-icon-size);
+  width: var(--sty-field-icon-size); height: var(--sty-field-icon-size);
+  margin-right: var(--sty-field-icon-gap);
+  position: relative; top: var(--sty-field-icon-top);
+  color: var(--sty-seg-ink);
+  cursor: pointer;
+}
+.sty-field-icon svg { display: block; }
+
+/* The field is 1px underlined at rest and 2px in every other state; the matching margin keeps
+ * the extra pixel from nudging the row below it. */
+.sty-field {
+  position: relative;
+  font-size: var(--sty-field-font);
+  min-width: var(--sty-field-min-width);
+  max-width: var(--sty-field-max-width);
+  padding: var(--sty-field-pad);
+  margin: var(--sty-field-margin);
+  border-bottom: 1px solid var(--sty-field-rule);
+}
+.sty-field:hover:not(:focus-within):not(.invalid) {
+  border-bottom: 2px solid var(--sty-field-rule-hover);
+  margin-bottom: 0;
+}
+.sty-field:focus-within {
+  border-bottom: 2px solid var(--sty-field-rule-focus);
+  margin-bottom: 0;
+}
+.sty-field.invalid {
+  border-bottom: 2px solid var(--sty-field-rule-invalid);
+  margin-bottom: 0;
+}
+/* The default, greyed, over the empty field. Not written into it: an empty field is what says
+ * "use whatever the default is", so typing the number in would freeze it at today's value. */
+.sty-field-ph {
+  position: absolute; left: var(--sty-field-icon-top); top: 50%;
+  transform: translateY(-50%);
+  color: var(--sty-seg-ink);
+  pointer-events: none;
+  font-family: var(--font-math); font-style: italic;
+}
+
 /* ---- line and point styles: segmented controls ----
  * The -1px margins collapse each pair of adjacent borders into a single hairline, and only the
  * outermost corners are rounded. Same construction as the settings panel's control, but the

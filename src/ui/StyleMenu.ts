@@ -18,9 +18,20 @@
 // in Desmos's "mini" theme. See the --sty-* block in tokens.css for the selectors each value
 // came from.
 
-import { checkIcon, lineStyleGlyph, pointStyleGlyph } from './icons.ts';
-import { LINE_STYLES, PALETTE, POINT_STYLES } from '../state/document.ts';
-import type { Expression, LineStyle, PointStyle } from '../state/document.ts';
+import { createMathField } from './MathField.ts';
+import type { MathFieldHandle } from './MathField.ts';
+import { checkIcon, lineStyleGlyph, opacityIcon, pointStyleGlyph, thicknessIcon } from './icons.ts';
+import {
+  DEFAULT_LINE_OPACITY,
+  DEFAULT_LINE_WIDTH,
+  DEFAULT_POINT_OPACITY,
+  DEFAULT_POINT_SIZE,
+  LINE_STYLES,
+  PALETTE,
+  POINT_STYLES,
+  styleFieldHasError,
+} from '../state/document.ts';
+import type { Expression, LineStyle, PointStyle, StyleFieldKind } from '../state/document.ts';
 
 export interface StyleMenuCallbacks {
   onColour(colour: string): void;
@@ -29,6 +40,18 @@ export interface StyleMenuCallbacks {
   /** The "Lines" and "Points" section toggles, which gate drawing rather than styling. */
   onLinesVisible(visible: boolean): void;
   onPointsVisible(visible: boolean): void;
+  /** The four math fields, reported as latex — the store holds them unevaluated. */
+  onLineOpacity(latex: string): void;
+  onLineWidth(latex: string): void;
+  onPointOpacity(latex: string): void;
+  onPointSize(latex: string): void;
+  /**
+   * Resolve a field's latex against the document scope, for the error underline only.
+   *
+   * The tray never stores the number. Whether `2a` is 4 or nonsense depends on the rest of the
+   * document, so the same latex can be valid one moment and not the next.
+   */
+  evaluateLatex(latex: string): number;
 }
 
 export interface StyleMenu {
@@ -94,6 +117,59 @@ function sectionTitle(
   return { row, input };
 }
 
+/** One row of a section's left-hand column: a grey glyph and a math field beside it. */
+interface FieldRow {
+  readonly row: HTMLElement;
+  /** Push the expression's latex in and refresh the placeholder and error underline. */
+  sync(latex: string, fallback: number, evaluate: (latex: string) => number): void;
+}
+
+/**
+ * A tray math field.
+ *
+ * The default is shown as a greyed placeholder in the empty field rather than written into it,
+ * which is Desmos's own arrangement and the reason its schema stores `""` and not `2.5`: the
+ * field being empty is what says "whatever the default happens to be", so a later change to the
+ * default follows every expression that never overrode it.
+ */
+function fieldRow(
+  className: string,
+  icon: string,
+  kind: StyleFieldKind,
+  onLatex: (latex: string) => void,
+): FieldRow {
+  const row = document.createElement('div');
+  row.className = `sty-field-row ${className}`;
+
+  const glyph = document.createElement('i');
+  glyph.className = 'sty-field-icon';
+  glyph.innerHTML = icon;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'sty-field';
+  const placeholder = document.createElement('span');
+  placeholder.className = 'sty-field-ph';
+
+  const handle: MathFieldHandle = createMathField(wrap, {
+    edit: (field) => onLatex(field.latex()),
+  });
+  wrap.appendChild(placeholder);
+
+  row.append(glyph, wrap);
+
+  return {
+    row,
+    sync(latex, fallback, evaluate) {
+      // Only when it differs, or every keystroke would be echoed back into the field the user is
+      // typing in and the caret would jump to the end.
+      if (handle.getLatex() !== latex) handle.setLatexQuietly(latex);
+      placeholder.textContent = String(fallback);
+      placeholder.hidden = latex.trim() !== '';
+      wrap.classList.toggle('invalid', styleFieldHasError(kind, latex, evaluate(latex)));
+    },
+  };
+}
+
 export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
   const element = document.createElement('div');
   element.className = 'popover sty-menu';
@@ -105,19 +181,42 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
   colourGrid.className = 'sty-colours';
   colourSection.appendChild(colourGrid);
 
+  // Both sections are the same shape, measured off Desmos's `.dcg-options-flex-container`: a
+  // 200px-wide row holding a left column of iconed math fields and a right column carrying the
+  // style buttons.
+  const flexRow = (left: HTMLElement[], right: HTMLElement): HTMLElement => {
+    const flex = document.createElement('div');
+    flex.className = 'sty-flex';
+    const leftCol = document.createElement('div');
+    leftCol.className = 'sty-left';
+    leftCol.append(...left);
+    const rightCol = document.createElement('div');
+    rightCol.className = 'sty-right';
+    rightCol.appendChild(right);
+    flex.append(leftCol, rightCol);
+    return flex;
+  };
+
   const lineSection = document.createElement('div');
   lineSection.className = 'sty-section';
   const lineTitle = sectionTitle('Lines', (on) => callbacks.onLinesVisible(on));
+  const lineOpacity = fieldRow('sty-line-opacity', opacityIcon, 'opacity', callbacks.onLineOpacity);
+  const lineWidth = fieldRow('sty-line-width', thicknessIcon, 'thickness', callbacks.onLineWidth);
   const lineRow = document.createElement('div');
   lineRow.className = 'sty-seg sty-lines';
-  lineSection.append(lineTitle.row, lineRow);
+  const lineContent = flexRow([lineOpacity.row, lineWidth.row], lineRow);
+  lineSection.append(lineTitle.row, lineContent);
 
   const pointSection = document.createElement('div');
   pointSection.className = 'sty-section';
   const pointTitle = sectionTitle('Points', (on) => callbacks.onPointsVisible(on));
+  const pointOpacity = fieldRow('sty-point-opacity', opacityIcon, 'opacity', callbacks.onPointOpacity);
+  // Desmos labels point size with the line-thickness glyph too, rather than inventing a second.
+  const pointSize = fieldRow('sty-point-size', thicknessIcon, 'thickness', callbacks.onPointSize);
   const pointGrid = document.createElement('div');
   pointGrid.className = 'sty-points';
-  pointSection.append(pointTitle.row, pointGrid);
+  const pointContent = flexRow([pointOpacity.row, pointSize.row], pointGrid);
+  pointSection.append(pointTitle.row, pointContent);
 
   element.append(colourSection, lineSection, pointSection);
 
@@ -143,9 +242,16 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
 
     lineTitle.input.checked = expression.lines;
     pointTitle.input.checked = expression.points;
-    // Desmos collapses a section's contents when its toggle is off, leaving the title behind.
-    lineRow.hidden = !expression.lines;
-    pointGrid.hidden = !expression.points;
+    // Desmos collapses a section's contents when its toggle is off, leaving the title behind —
+    // the fields go with the buttons, since they style what is no longer drawn.
+    lineContent.hidden = !expression.lines;
+    pointContent.hidden = !expression.points;
+
+    const evaluate = callbacks.evaluateLatex;
+    lineOpacity.sync(expression.lineOpacity, DEFAULT_LINE_OPACITY, evaluate);
+    lineWidth.sync(expression.lineWidth, DEFAULT_LINE_WIDTH, evaluate);
+    pointOpacity.sync(expression.pointOpacity, DEFAULT_POINT_OPACITY, evaluate);
+    pointSize.sync(expression.pointSize, DEFAULT_POINT_SIZE, evaluate);
 
     lineRow.innerHTML = '';
     for (const style of LINE_STYLES) {

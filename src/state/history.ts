@@ -30,8 +30,10 @@ export interface ExpressionSnapshot {
   readonly points: boolean;
   readonly lineStyle: LineStyle;
   readonly pointStyle: PointStyle;
-  readonly lineWidth: number | null;
-  readonly pointSize: number | null;
+  readonly lineOpacity: string;
+  readonly lineWidth: string;
+  readonly pointOpacity: string;
+  readonly pointSize: string;
   /**
    * Animation state, motion included.
    *
@@ -60,7 +62,9 @@ export const snapshotOf = (expressions: readonly Expression[]): Snapshot =>
     points: e.points,
     lineStyle: e.lineStyle,
     pointStyle: e.pointStyle,
+    lineOpacity: e.lineOpacity,
     lineWidth: e.lineWidth,
+    pointOpacity: e.pointOpacity,
     pointSize: e.pointSize,
     playing: e.playing,
     playDirection: e.playDirection,

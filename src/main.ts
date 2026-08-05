@@ -24,7 +24,15 @@ import { History, snapshotOf } from './state/history.ts';
 import type { Snapshot } from './state/history.ts';
 import { Selection } from './state/selection.ts';
 import { Store } from './state/store.ts';
-import { nextLoopMode, stepSlider } from './state/document.ts';
+import {
+  DEFAULT_LINE_OPACITY,
+  DEFAULT_LINE_WIDTH,
+  DEFAULT_POINT_OPACITY,
+  DEFAULT_POINT_SIZE,
+  nextLoopMode,
+  resolveStyleField,
+  stepSlider,
+} from './state/document.ts';
 import type { Expression } from './state/document.ts';
 import { createExpressionList } from './ui/ExpressionList.ts';
 import type { RowCallbacks } from './ui/ExpressionRow.ts';
@@ -74,6 +82,22 @@ async function boot(): Promise<void> {
     onKeypad: () => keypad.toggle(),
   });
 
+  /**
+   * Resolve a latex fragment to a number against the document scope, or NaN.
+   *
+   * Shared by the settings panel's bounds and the style tray's four fields — both are real math
+   * inputs in Desmos, so both resolve the same way and both see the same variables.
+   */
+  function evaluateLatex(latex: string): number {
+    const src = latexToSource(latex).trim();
+    if (!src) return NaN;
+    try {
+      return asScalar(compile(parseSource(src))({ x: 0, y: 0 }, store.scope));
+    } catch {
+      return NaN;
+    }
+  }
+
   const settingsPanel = createSettingsPanel({
     onChange: (patch) => {
       store.patchSettings(patch);
@@ -90,15 +114,7 @@ async function boot(): Promise<void> {
     },
     // The panel's bounds and step are full math fields, so "pi", "4pi" and "e^3" all work, and
     // they resolve against the document scope — a bound may reference a slider variable.
-    evaluateLatex: (latex) => {
-      const src = latexToSource(latex).trim();
-      if (!src) return NaN;
-      try {
-        return asScalar(compile(parseSource(src))({ x: 0, y: 0 }, store.scope));
-      } catch {
-        return NaN;
-      }
-    },
+    evaluateLatex,
   });
   shell.graph.mountOverlay(settingsPanel.element);
 
@@ -113,17 +129,25 @@ async function boot(): Promise<void> {
     onPointStyle: (pointStyle) => applyStyle({ pointStyle }),
     onLinesVisible: (lines) => applyStyle({ lines }),
     onPointsVisible: (points) => applyStyle({ points }),
+    // The four math fields fire per keystroke, so their history is debounced the way typing in
+    // an expression is. A button press is one deliberate act and snapshots immediately.
+    onLineOpacity: (lineOpacity) => applyStyle({ lineOpacity }, true),
+    onLineWidth: (lineWidth) => applyStyle({ lineWidth }, true),
+    onPointOpacity: (pointOpacity) => applyStyle({ pointOpacity }, true),
+    onPointSize: (pointSize) => applyStyle({ pointSize }, true),
+    evaluateLatex,
   });
   shell.panel.appendChild(styleMenu.element);
 
-  function applyStyle(patch: Parameters<Store['setStyle']>[1]): void {
+  function applyStyle(patch: Parameters<Store['setStyle']>[1], typed = false): void {
     const target = store.expressions.find((e) => e.id === styleMenu.targetId);
     if (!target) return;
     store.setStyle(target, patch);
     renderList();
     styleMenu.update(target);
     draw();
-    history.push(snapshotOf(store.expressions));
+    if (typed) scheduleSnapshot();
+    else history.push(snapshotOf(store.expressions));
   }
 
   const renderer = new Renderer(shell.graph.context, view, store.scope);
@@ -180,6 +204,9 @@ async function boot(): Promise<void> {
       // The tray's Lines and Points toggles. Each expression draws one or the other, so only
       // the toggle matching its kind can suppress it.
       if (analysis.kind === 'point' ? !e.points : !e.lines) continue;
+      // The tray's four fields are latex, so they are resolved here rather than in the renderer:
+      // this is the layer that owns the evaluator. An empty field short-circuits to NaN inside
+      // `evaluateLatex`, so an expression that has never been styled costs nothing.
       out.push({
         id: e.id,
         kind: analysis.kind,
@@ -188,8 +215,10 @@ async function boot(): Promise<void> {
         fn: analysis.fn,
         lineStyle: e.lineStyle,
         pointStyle: e.pointStyle,
-        lineWidth: e.lineWidth,
-        pointSize: e.pointSize,
+        lineWidth: resolveStyleField('thickness', evaluateLatex(e.lineWidth), DEFAULT_LINE_WIDTH),
+        pointSize: resolveStyleField('thickness', evaluateLatex(e.pointSize), DEFAULT_POINT_SIZE),
+        lineOpacity: resolveStyleField('opacity', evaluateLatex(e.lineOpacity), DEFAULT_LINE_OPACITY),
+        pointOpacity: resolveStyleField('opacity', evaluateLatex(e.pointOpacity), DEFAULT_POINT_OPACITY),
       });
     }
     return out;
@@ -349,7 +378,9 @@ async function boot(): Promise<void> {
           created.points = s.points;
           created.lineStyle = s.lineStyle;
           created.pointStyle = s.pointStyle;
+          created.lineOpacity = s.lineOpacity;
           created.lineWidth = s.lineWidth;
+          created.pointOpacity = s.pointOpacity;
           created.pointSize = s.pointSize;
           created.playing = s.playing;
           created.playDirection = s.playDirection;

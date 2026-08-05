@@ -1,6 +1,6 @@
 # Desmos 2.0 — handoff
 
-Everything committed, working tree clean. **208 tests pass, both typechecks clean.**
+Everything committed, working tree clean. **220 tests pass, both typechecks clean.**
 
 ---
 
@@ -101,8 +101,8 @@ Chrome tab — DesModder only touches desmos.com, so screenshotting *our* app th
 | `core/` | Complete for milestone 1: lang, eval, numerics/roots, poi. Zero DOM, enforced by `tsconfig.core.json` |
 | `graph/` | Complete: transform, viewport, grid, axes, plotters, pick, trace, renderer |
 | `state/` | Complete: document, store, history, selection, persist (serialise only) |
-| `ui/` | Shell, header, toolbar, expression list/row, slider **incl. animation**, math field, graph pane, point labels, settings panel, **style tray (geometry now measured)**, **keypad** |
-| Tests | 208, in `tests/` mirroring `src/core/` plus `tests/graph` and `tests/state` |
+| `ui/` | Shell, header, toolbar, expression list/row, slider **incl. animation**, math field, graph pane, point labels, settings panel, **style tray incl. opacity and width/size fields**, **keypad** |
+| Tests | 220, in `tests/` mirroring `src/core/` plus `tests/graph` and `tests/state` |
 
 ### Measured facts now encoded in the code
 
@@ -134,6 +134,17 @@ Do not re-derive these; they were each measured, several contradict the obvious 
   tick over the tile**, not a ring. Line styles are 33×30 segmented buttons, point styles a 4×2
   grid of 28×28. Both are the **"mini" theme**: `#bbb` borders and an accent-tinted selection,
   *not* the settings panel's dark grey. The previews are `#949494`, never the expression's colour.
+- **A tray section is two columns, not one.** `.dcg-options-flex-container` is a 200px row — the
+  tray's 220px less its 10px padding either side — with the opacity and width/size fields down
+  the left (`flex: 1 1 0`) and the style buttons on the right. Each field row is
+  `padding: 7px 0 1px`, a 13px `#949494` glyph, then a field of `min-width: 42px` /
+  `max-width: 60px` underlined 1px `rgba(0,0,0,.2)`, going 2px on hover (`#ccc`), focus
+  (`#2f72dc`) and error (`#e15855`) with a matching negative margin so nothing shifts.
+- **The four style defaults come from Desmos's bundle, not from pixels**: `getLineWidth()` 2.5,
+  `getLineOpacity()` 1, `getPointOpacityPlaceholder()` 1, `getDefaultPointSize()` **8**. They
+  are shown as placeholders in empty fields; **the schema stores `""`, never the number**, which
+  is what lets a later change to a default follow every expression that never overrode it.
+  Point size was 9 here — an eyeballed prototype value — until this was read.
 - **Keypad**: an 835px-max well, 4 rows of 40px, `4px 3px` padding, `#f0f0f0` on a
   `rgba(0,0,0,.1)` top border. **Each row is eleven units**: an ordinary key takes one, the gaps
   between key groups take a half, `functions` and `enter` take two, `backspace` takes one and a
@@ -227,24 +238,13 @@ through the slider's context menu, which does not exist here, so every slider ru
 
 ## Next up, in the order I would take them
 
-### 1. The style tray's opacity and size fields
-The **"Lines"** and **"Points"** sections are built, titles and sliding toggles included, backed
-by real `lines` / `points` booleans on `Expression` that `drawables()` honours. What is still
-missing is the left-hand half of each: Desmos puts **opacity** and **width/size** math fields
-there. Those need `lineOpacity`, `lineWidth` and `pointSize` carried through the renderer —
-`Expression` already has the last two, but nothing reads them.
-
-Note the sections are mutually exclusive here on purpose: a curve has no points and a point has
-no lines, so exactly one shows. That stops being true the moment a plotter draws both at once
-(tables, point lists with connecting lines), and at that point both should show together.
-
-### 2. The keypad's two remaining panels
+### 1. The keypad's two remaining panels
 `functions` and `ABC` render **disabled**, alongside `Audio` which Desmos disables too. Each
 opens a further panel that does not exist yet: `functions` is a popover of trig/stats/list
 commands, `ABC` swaps the whole well for a letters keypad. Both are additive — the key table in
 `Keypad.ts` is plain data and a new panel is a new module, not a rewrite.
 
-### 3. Missing wrench controls
+### 2. Missing wrench controls
 Still to build: the display-size segmented control, and the grid-style icon pair inside the Grid
 block between the Grid and Arrows checkboxes (`.dcg-circle-icon-group.dcg-grid-group`, 86×32).
 
@@ -258,7 +258,7 @@ not guesses:
 - It squares whichever axis the user did **not** last edit, so the bound they just typed
   survives. That is why `Viewport` now tracks `lastChangedAxis`.
 
-### 4. Deliberately deferred, each needing an engine feature first
+### 3. Deliberately deferred, each needing an engine feature first
 Display size (theming); **Complex Mode** (needs `core/numeric/complex.ts` wired through the
 evaluator); More Options. Leaving a gap is better than shipping a control that lies.
 
@@ -279,6 +279,18 @@ Do not build them and do not re-add them to this list.
   live Desmos renders exactly one row when empty, and `expressions + 1` once anything is typed,
   because a blank last row *is* its new-expression row. Our behaviour already matches. Verified
   against live Desmos — do not "fix" this.
+- **The tray's four style fields are latex on `Expression`, not numbers.** `lineOpacity`,
+  `lineWidth`, `pointOpacity` and `pointSize` are strings resolved against the document scope,
+  because Desmos's are real math inputs — `lineWidth: "a"` is a stroke driven by a slider.
+  `drawables()` in `main.ts` resolves them, because that is the layer owning the evaluator;
+  `Drawable` receives plain numbers and the renderer never evaluates anything. An empty field
+  short-circuits inside `evaluateLatex`, so an unstyled expression costs nothing per frame.
+- **An unusable style value falls back; an out-of-range opacity clamps *and* marks the field.**
+  Those are deliberately different rules (`resolveStyleField` vs `styleFieldHasError`): opacity 2
+  draws as 1 rather than making the curve vanish, but the field still underlines red, because
+  clamping in silence reads as the input having been ignored.
+- **`ctx.globalAlpha` must be put back to 1.** Both the stroke and the point path set it now; a
+  leaked alpha would fade the points-of-interest markers drawn afterwards.
 - **A running animation pushes no undo steps, on purpose.** Each frame calls the *debounced*
   `scheduleSnapshot`, so the timer never fires while the slider is moving and exactly one
   snapshot lands 450 ms after it stops. Swapping that for `history.push` would fill the history

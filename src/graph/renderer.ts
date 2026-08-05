@@ -17,7 +17,7 @@ import type { ExpressionKind } from '../core/lang/analyze.ts';
 import type { Scope } from '../core/lang/scope.ts';
 import { orientationOf } from '../core/poi.ts';
 import type { POI } from '../core/poi.ts';
-import { DEFAULT_LINE_WIDTH, DEFAULT_POINT_SIZE, dashPattern } from '../state/document.ts';
+import { DEFAULT_LINE_WIDTH, dashPattern } from '../state/document.ts';
 import type { LineStyle, PointStyle } from '../state/document.ts';
 
 export const CURVE_WIDTH = DEFAULT_LINE_WIDTH;
@@ -37,9 +37,17 @@ export interface Drawable {
   readonly fn: Compiled;
   readonly lineStyle: LineStyle;
   readonly pointStyle: PointStyle;
-  /** null means the default. */
-  readonly lineWidth: number | null;
-  readonly pointSize: number | null;
+  /**
+   * Already resolved to numbers.
+   *
+   * The document holds these as latex, but resolving one means evaluating it against the scope,
+   * and the renderer is not the layer that owns the evaluator — the caller hands down the
+   * answer. Widths and sizes are css pixels; opacities are 0…1.
+   */
+  readonly lineWidth: number;
+  readonly pointSize: number;
+  readonly lineOpacity: number;
+  readonly pointOpacity: number;
 }
 
 export interface Scene {
@@ -134,7 +142,9 @@ export class Renderer {
         this.paths.set(d.id, paths);
         this.strokePaths(paths, d, d.id === scene.selectedId);
       } else if (point) {
-        drawPoint(ctx, point, d.colour, d.pointStyle, d.pointSize ?? DEFAULT_POINT_SIZE);
+        ctx.globalAlpha = d.pointOpacity;
+        drawPoint(ctx, point, d.colour, d.pointStyle, d.pointSize);
+        ctx.globalAlpha = 1;
       }
       drawMs += performance.now() - strokeStart;
     }
@@ -148,8 +158,9 @@ export class Renderer {
 
   private strokePaths(paths: readonly Polyline[], d: Drawable, selected: boolean): void {
     const { ctx } = this;
-    const width = (d.lineWidth ?? CURVE_WIDTH) * (selected ? SELECTED_WIDTH_FACTOR : 1);
+    const width = d.lineWidth * (selected ? SELECTED_WIDTH_FACTOR : 1);
     ctx.strokeStyle = d.colour;
+    ctx.globalAlpha = d.lineOpacity;
     ctx.lineWidth = width;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
@@ -165,6 +176,7 @@ export class Renderer {
     }
     ctx.stroke();
     ctx.setLineDash([]);          // never leak a dash into the next thing drawn
+    ctx.globalAlpha = 1;          // nor a partial alpha — the POI markers are always opaque
   }
 
   private drawPOIs(scene: Scene): void {

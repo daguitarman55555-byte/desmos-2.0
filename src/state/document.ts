@@ -51,9 +51,25 @@ export const POINT_STYLES: readonly PointStyle[] = [
   'POINT', 'OPEN', 'CROSS', 'PLUS', 'SQUARE', 'DIAMOND', 'STAR', 'TRIANGLE',
 ];
 
+// ── Style defaults ───────────────────────────────────────────────────────────────────────────
+//
+// All four come out of Desmos's own bundle rather than off a rendered pixel, so they are exact:
+// the tray's fields are empty by default and show these as placeholders, from `getLineWidth()`,
+// `getLineOpacity()`, `getDefaultPointSize()` and `getPointOpacityPlaceholder()`.
+
 /** Default stroke width in css pixels, and the width the dash patterns are quoted against. */
 export const DEFAULT_LINE_WIDTH = 2.5;
-export const DEFAULT_POINT_SIZE = 9;
+
+/**
+ * Default point diameter in css pixels.
+ *
+ * Desmos says 8. This was 9 — an eyeballed prototype value — until `getDefaultPointSize()` was
+ * read out of the bundle. (It answers 14 instead for a dotplot, which we cannot draw.)
+ */
+export const DEFAULT_POINT_SIZE = 8;
+
+export const DEFAULT_LINE_OPACITY = 1;
+export const DEFAULT_POINT_OPACITY = 1;
 
 /**
  * Dash patterns, in css pixels, as multiples of the stroke width.
@@ -130,9 +146,18 @@ export interface Expression {
   points: boolean;
   lineStyle: LineStyle;
   pointStyle: PointStyle;
-  /** Empty string means "use the default", matching Desmos's own model. */
-  lineWidth: number | null;
-  pointSize: number | null;
+  /**
+   * The style tray's four math fields, as latex.
+   *
+   * Latex rather than numbers because Desmos's are real math inputs resolved against the
+   * document scope — `lineWidth: "a"` is a stroke driven by a slider, and `pointSize: "2n"`
+   * works. Empty means "use the default", which is Desmos's own model: its schema carries these
+   * as strings and an untouched expression has `""` in all four.
+   */
+  lineOpacity: string;
+  lineWidth: string;
+  pointOpacity: string;
+  pointSize: string;
   /** Slider bounds and current value. */
   min: number;
   max: number;
@@ -216,7 +241,7 @@ export function createExpression(id: number, latex = ''): Expression {
     id, latex, colour: null, visible: true,
     lines: true, points: true,
     lineStyle: 'SOLID', pointStyle: 'POINT',
-    lineWidth: null, pointSize: null,
+    lineOpacity: '', lineWidth: '', pointOpacity: '', pointSize: '',
     min: -10, max: 10, step: '', val: 0,
     playing: false, playDirection: 1,
     loopMode: 'LOOP_FORWARD_REVERSE', animationPeriod: DEFAULT_ANIMATION_PERIOD,
@@ -224,6 +249,43 @@ export function createExpression(id: number, latex = ''): Expression {
 }
 
 export const isBlank = (e: Expression): boolean => e.latex.trim() === '';
+
+// ── Style fields ─────────────────────────────────────────────────────────────────────────────
+//
+// Each of the tray's four fields is latex the caller has already handed to the document's
+// evaluator; what arrives here is the number that came back, or NaN if the field was empty or
+// did not parse. Everything below is pure so the fallback and clamping rules can be tested
+// without a renderer or a math field.
+
+/** What kind of quantity a tray field holds, which is what sets its accepted range. */
+export type StyleFieldKind = 'opacity' | 'thickness';
+
+/**
+ * Resolve a field to the number the renderer should use.
+ *
+ * An unusable value falls back to the default rather than drawing nothing — Desmos underlines
+ * the field red and carries on drawing, which is the numeric-errors-are-silent rule applied to
+ * styling. An opacity outside 0…1 is clamped rather than rejected, so dragging a slider bound to
+ * one saturates instead of making the curve vanish at the ends.
+ */
+export function resolveStyleField(kind: StyleFieldKind, value: number, fallback: number): number {
+  if (!isFinite(value)) return fallback;
+  if (kind === 'opacity') return Math.min(1, Math.max(0, value));
+  return value >= 0 ? value : fallback;
+}
+
+/**
+ * Whether a field should show its error underline.
+ *
+ * Empty is not an error — it is how "use the default" is spelled. Note this is deliberately
+ * stricter than `resolveStyleField`: an opacity of 2 draws as 1 but still marks the field,
+ * because silently clamping without saying so would look like the input was ignored.
+ */
+export function styleFieldHasError(kind: StyleFieldKind, latex: string, value: number): boolean {
+  if (latex.trim() === '') return false;
+  if (!isFinite(value)) return true;
+  return kind === 'opacity' ? value < 0 || value > 1 : value < 0;
+}
 
 // ── Slider animation ─────────────────────────────────────────────────────────────────────────
 //

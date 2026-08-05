@@ -357,6 +357,27 @@
   --sty-knob-shadow: 0 2px 2px rgba(0, 0, 0, 0.2), 0 0 3px rgba(0, 0, 0, 0.2);
   --sty-toggle-ease: 0.2s;
 
+  /* Opacity and width/size fields, from .dcg-options-flex-container, .dcg-options-left-side and
+   * .dcg-iconed-mathquill-row. The 200px container is the 220px tray less its 10px padding on
+   * each side, which is how the two numbers stay in step. */
+  --sty-flex-max-width: 200px;
+  --sty-flex-pad-top: 3px;
+  --sty-field-row-pad: 7px 0 1px;
+  --sty-field-icon-size: 13px;
+  --sty-field-icon-gap: 5px;
+  --sty-field-icon-top: 2px;
+  --sty-field-min-width: 42px;
+  --sty-field-max-width: 60px;
+  --sty-field-pad: 1px 2px;
+  --sty-field-margin: 1px;
+  --sty-field-font: 95%;
+  /* The underline is 1px at rest and 2px in every other state, with the margin giving the extra
+   * pixel back so nothing below it shifts. */
+  --sty-field-rule: rgba(0, 0, 0, 0.2);
+  --sty-field-rule-hover: #ccc;
+  --sty-field-rule-focus: #2f72dc;
+  --sty-field-rule-invalid: #e15855;
+
   /* ── Graph ───────────────────────────────────────────────────────────── */
   /* Measured: the pillbox sits 5px from the top and right of the graph pane, and each
    * button is 37px (Desmos's interior buttons are 35 inside a 1px-bordered 37px shell). */

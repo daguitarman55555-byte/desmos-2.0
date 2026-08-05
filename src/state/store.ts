@@ -162,7 +162,11 @@ export class Store {
   setStyle(
     e: Expression,
     patch: Partial<
-      Pick<Expression, 'colour' | 'lines' | 'points' | 'lineStyle' | 'pointStyle' | 'lineWidth' | 'pointSize'>
+      Pick<
+        Expression,
+        | 'colour' | 'lines' | 'points' | 'lineStyle' | 'pointStyle'
+        | 'lineOpacity' | 'lineWidth' | 'pointOpacity' | 'pointSize'
+      >
     >,
   ): void {
     Object.assign(e, patch);

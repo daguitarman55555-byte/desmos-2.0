@@ -17,8 +17,10 @@ function styled(): Expression {
   e.points = true;
   e.lineStyle = 'DASHED';
   e.pointStyle = 'STAR';
-  e.lineWidth = 4;
-  e.pointSize = 12;
+  e.lineOpacity = '0.5';
+  e.lineWidth = '4';
+  e.pointOpacity = 'a';
+  e.pointSize = '12';
   e.min = -3;
   e.max = 7;
   e.val = 2;
@@ -40,8 +42,10 @@ describe('snapshotOf', () => {
       points: true,
       lineStyle: 'DASHED',
       pointStyle: 'STAR',
-      lineWidth: 4,
-      pointSize: 12,
+      lineOpacity: '0.5',
+      lineWidth: '4',
+      pointOpacity: 'a',
+      pointSize: '12',
       min: -3,
       max: 7,
       val: 2,

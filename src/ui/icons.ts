@@ -261,6 +261,28 @@ export const lineStyleGlyph = (style: LineStyle): string => {
 export const pointStyleGlyph = (style: PointStyle): string =>
   `<svg viewBox="0 0 30 30" width="100%" height="100%">${markerPath(style, 'currentColor', 9.5, 2.8)}</svg>`;
 
+// ── Tray field icons ─────────────────────────────────────────────────────────────────────────
+//
+// Desmos labels the opacity and thickness fields with `dcg-icon-opacity` and
+// `dcg-icon-line-thickness` from its private icon font, so these are redrawn rather than
+// copied. Both take `currentColor` — the stylesheet greys them to #949494, matching the tray's
+// other previews, and that is a single source of truth for the colour.
+
+/** Opacity: the half-filled disc, the conventional glyph for it. */
+export const opacityIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%">
+  <path d="M12 2.6a9.4 9.4 0 0 0 0 18.8z" fill="currentColor"/>
+  <circle cx="12" cy="12" r="9.4" fill="none" stroke="currentColor" stroke-width="1.9"/>
+</svg>`;
+
+/** Line thickness: three rules, thin to thick. Also labels the point-size field, as in Desmos. */
+export const thicknessIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" stroke="currentColor" stroke-linecap="round" fill="none">
+  <path d="M3 6h18" stroke-width="1.4"/>
+  <path d="M3 12h18" stroke-width="2.8"/>
+  <path d="M3 18.4h18" stroke-width="4.4"/>
+</svg>`;
+
 /** The structural-error marker. Numeric errors never show this. */
 export function warnIcon(): string {
   return `<svg viewBox="0 0 30 30" width="100%" height="100%">
