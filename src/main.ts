@@ -80,6 +80,10 @@ async function boot(): Promise<void> {
       view.setBounds(patch);
       draw();
     },
+    onZoomSquare: () => {
+      view.zoomSquare();
+      draw();
+    },
     // The panel's bounds and step are full math fields, so "pi", "4pi" and "e^3" all work, and
     // they resolve against the document scope — a bound may reference a slider variable.
     evaluateLatex: (latex) => {
@@ -96,7 +100,7 @@ async function boot(): Promise<void> {
 
   const syncSettingsPanel = (): void => {
     if (!settingsPanel.isOpen) return;
-    settingsPanel.update({ ...store.settings }, view.boundsObject());
+    settingsPanel.update({ ...store.settings }, view.boundsObject(), view.axesSquare);
   };
 
   const styleMenu = createStyleMenu({
@@ -276,6 +280,10 @@ async function boot(): Promise<void> {
           created.max = s.max;
           created.val = s.val;
           created.visible = s.visible;
+          created.lineStyle = s.lineStyle;
+          created.pointStyle = s.pointStyle;
+          created.lineWidth = s.lineWidth;
+          created.pointSize = s.pointSize;
           return created;
         }),
       );

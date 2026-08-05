@@ -198,15 +198,20 @@ commands, `ABC` swaps the whole well for a letters keypad. Both are additive —
 `Keypad.ts` is plain data and a new panel is a new module, not a rewrite.
 
 ### 3. Missing wrench controls
-Visible in the user's screenshot, not yet built: **One Quadrant**, **Zoom Square**, the
-display-size segmented control, and the grid-style icon pair that sits inside the Grid block
-between the Grid and Arrows checkboxes (`.dcg-circle-icon-group.dcg-grid-group`, 86×32).
+Still to build: the display-size segmented control, and the grid-style icon pair inside the Grid
+block between the Grid and Arrows checkboxes (`.dcg-circle-icon-group.dcg-grid-group`, 86×32).
 
-### 4. Trailing blank row
-Desmos shows rows 1 *and* 2 on a blank document; we show one. `store.ensureTrailingBlank()` only
-appends when the last row is non-blank. Small fix, visible difference.
+**One Quadrant** and **Zoom Square** are now built. Both came out of Desmos's
+`dcg-top-checkboxes-container`, which is the right-hand column of the Grid block, in the order
+Axis Numbers → Minor Gridlines → One Quadrant → Zoom Square. Two details that are Desmos's and
+not guesses:
 
-### 5. Deliberately deferred, each needing an engine feature first
+- Zoom Square appears **only while the axes are non-square** — it is hidden the rest of the time
+  rather than shown doing nothing.
+- It squares whichever axis the user did **not** last edit, so the bound they just typed
+  survives. That is why `Viewport` now tracks `lastChangedAxis`.
+
+### 4. Deliberately deferred, each needing an engine feature first
 Display size, reverse contrast, braille mode (theming/accessibility); **Complex Mode** (needs
 `core/numeric/complex.ts` wired through the evaluator); More Options. Leaving a gap is better than
 shipping a control that lies.
@@ -215,6 +220,16 @@ shipping a control that lies.
 
 ## Landmines
 
+- **A blank document showing one row is correct.** An earlier note here claimed Desmos shows
+  rows 1 *and* 2 on a blank document and that `ensureTrailingBlank()` needed fixing. It does not:
+  live Desmos renders exactly one row when empty, and `expressions + 1` once anything is typed,
+  because a blank last row *is* its new-expression row. Our behaviour already matches. Verified
+  against live Desmos — do not "fix" this.
+- **Anything added to `Expression` must be added to `ExpressionSnapshot` too.** Restoring rebuilds
+  every expression with `store.create()`, so a field missing from the snapshot silently reverts to
+  its default on the next undo. That is what used to happen to line and point styles: one undo
+  reset the styling of every row in the document. `tests/state/history.test.ts` now compares the
+  key sets to catch a repeat.
 - **The panel width is deliberately not a token.** `--panel-width` is only the value used before
   the first layout pass; `expressionPanelWidth()` computes the real one and writes it inline on
   every resize. Do not "tidy" that back into a constant in `tokens.css` — see above for why the

@@ -188,9 +188,18 @@ body {
   padding: var(--toast-close-pad); display: flex;
 }
 
+/* Takes no width in the flow, so the graph starts flush against the panel exactly as Desmos's
+ * does. The grab area is a pseudo-element straddling the boundary — it still hit-tests as the
+ * resizer, so the drag handler is unchanged, and it no longer pushes the canvas 1.6px right. */
 #resizer {
-  width: var(--resizer-width); flex: 0 0 var(--resizer-width);
-  margin-left: var(--resizer-offset); cursor: col-resize; z-index: 10;
+  width: 0; flex: 0 0 0;
+  position: relative; z-index: 10;
+}
+#resizer::before {
+  content: ''; position: absolute; top: 0; bottom: 0;
+  left: calc(var(--resizer-width) / -2);
+  width: var(--resizer-width);
+  cursor: col-resize;
 }
 
 /* ===================== RESPONSIVE ===================== */

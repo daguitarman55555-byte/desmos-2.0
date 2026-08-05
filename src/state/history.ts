@@ -4,7 +4,7 @@
 // undo walk back a character at a time. The same position drives the toolbar arrows' enabled
 // state, so there is one source of truth for both.
 
-import type { Expression } from './document.ts';
+import type { Expression, LineStyle, PointStyle } from './document.ts';
 
 /** Milliseconds of quiet before a snapshot is taken. */
 export const SNAPSHOT_DEBOUNCE_MS = 450;
@@ -12,7 +12,13 @@ export const SNAPSHOT_DEBOUNCE_MS = 450;
 /** Maximum retained steps; the oldest is dropped past this. */
 export const HISTORY_CAP = 250;
 
-/** Only the fields that can be edited — ids and derived state are rebuilt on restore. */
+/**
+ * Only the fields that can be edited — ids and derived state are rebuilt on restore.
+ *
+ * "Edited" has to include everything the style tray writes. Restoring rebuilds each expression
+ * from scratch, so any field missing here silently reverts to its default on the next undo —
+ * which is exactly what used to happen to line and point styles.
+ */
 export interface ExpressionSnapshot {
   readonly latex: string;
   readonly colour: string | null;
@@ -20,6 +26,10 @@ export interface ExpressionSnapshot {
   readonly max: number;
   readonly val: number;
   readonly visible: boolean;
+  readonly lineStyle: LineStyle;
+  readonly pointStyle: PointStyle;
+  readonly lineWidth: number | null;
+  readonly pointSize: number | null;
 }
 
 export type Snapshot = readonly ExpressionSnapshot[];
@@ -32,6 +42,10 @@ export const snapshotOf = (expressions: readonly Expression[]): Snapshot =>
     max: e.max,
     val: e.val,
     visible: e.visible,
+    lineStyle: e.lineStyle,
+    pointStyle: e.pointStyle,
+    lineWidth: e.lineWidth,
+    pointSize: e.pointSize,
   }));
 
 export class History {

@@ -42,6 +42,20 @@ export class Viewport {
   /** True once the user pans or zooms — drives the home button's visibility. */
   userMoved = false;
 
+  /**
+   * Which axis the settings panel last set a bound on, or null.
+   *
+   * Desmos keeps this so Zoom Square knows which axis to leave alone: it squares whichever axis
+   * the user did *not* just edit, on the reasoning that the number they typed is the one they
+   * meant. `getSquareViewport()` in its bundle branches on exactly this.
+   */
+  lastChangedAxis: 'x' | 'y' | null = null;
+
+  /** Are the two scales equal, i.e. is one maths unit the same length on both axes? */
+  get axesSquare(): boolean {
+    return Math.abs(this.ppuX - this.ppuY) <= 1e-9 * Math.max(this.ppuX, this.ppuY);
+  }
+
   readonly transform: Transform = cartesian;
 
   get state(): ViewportState {
@@ -94,12 +108,28 @@ export class Viewport {
       this.ppuX = this.clampPPU(this.width / (xmax - xmin));
       this.cx = (xmin + xmax) / 2;
       this.userMoved = true;
+      if (patch.xmin !== undefined || patch.xmax !== undefined) this.lastChangedAxis = 'x';
     }
     if (isFinite(ymin) && isFinite(ymax) && ymax > ymin && this.height) {
       this.ppuY = this.clampPPU(this.height / (ymax - ymin));
       this.cy = (ymin + ymax) / 2;
       this.userMoved = true;
+      if (patch.ymin !== undefined || patch.ymax !== undefined) this.lastChangedAxis = 'y';
     }
+  }
+
+  /**
+   * Make one maths unit the same length on both axes.
+   *
+   * Desmos adjusts whichever axis the user did *not* last edit, so the bound they just typed
+   * survives and the other one gives way. The centres do not move, so the graph rescales about
+   * the middle rather than jumping.
+   */
+  zoomSquare(): void {
+    if (this.axesSquare) return;
+    this.userMoved = true;
+    if (this.lastChangedAxis === 'y') this.ppuX = this.ppuY;
+    else this.ppuY = this.ppuX;
   }
 
   /**
@@ -121,6 +151,7 @@ export class Viewport {
 
   resetToDefault(): void {
     this.userMoved = false;
+    this.lastChangedAxis = null;
     this.fit();
   }
 

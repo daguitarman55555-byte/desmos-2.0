@@ -91,6 +91,28 @@
 .set-grid-left .set-check span,
 .set-grid-right .set-check span { white-space: nowrap; }
 
+/* ---- Zoom Square ----
+ * Sits in the right-hand checkbox column, below One Quadrant, and only while the axes are
+ * non-square. Desmos floats it clear so it starts a line of its own inside that column.
+ */
+.set-zoom-square {
+  display: block; clear: left;
+  margin: var(--zsq-margin);
+  padding: var(--zsq-pad);
+  font-family: inherit;
+  font-size: var(--zsq-font-size);
+  line-height: var(--zsq-line-height);
+  color: var(--c-text);
+  background: var(--zsq-bg);
+  border: 1px solid var(--zsq-border);
+  border-radius: var(--seg-radius);
+  box-shadow: var(--zsq-emboss);
+  cursor: pointer; white-space: nowrap;
+}
+.set-zoom-square:hover { background: var(--c-hover); }
+.set-zoom-square:active { box-shadow: none; }
+.set-zoom-square[hidden] { display: none; }
+
 /* ---- axis blocks ---- */
 .set-axis { font-size: var(--fs-settings-axis); }
 

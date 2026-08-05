@@ -124,6 +124,8 @@ export interface GraphSettings {
   readonly showArrows: boolean;
   readonly showXAxis: boolean;
   readonly showYAxis: boolean;
+  /** Desmos's "One Quadrant": clip the grid to x >= 0, y >= 0. The axes still draw in full. */
+  readonly restrictGridToFirstQuadrant: boolean;
 
   readonly xAxisLabel: string;
   readonly yAxisLabel: string;
@@ -141,6 +143,7 @@ export const DEFAULT_SETTINGS: GraphSettings = {
   showArrows: false,
   showXAxis: true,
   showYAxis: true,
+  restrictGridToFirstQuadrant: false,
   xAxisLabel: '',
   yAxisLabel: '',
   xAxisStep: null,

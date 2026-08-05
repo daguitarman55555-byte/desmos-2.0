@@ -15,6 +15,11 @@
 //     line-style icons, which are a separate piece of work.
 //
 // Everything present is live: each control drives something the renderer or evaluator honours.
+//
+// The right-hand column's order is Desmos's, read off its `dcg-top-checkboxes-container`:
+// Axis Numbers, Minor Gridlines, One Quadrant, then the Zoom Square button. Each of the last
+// three is conditional — Minor Gridlines needs the grid on, and Zoom Square only appears while
+// the axes are actually non-square, which is the only time it would do anything.
 
 import { createMathField } from './MathField.ts';
 import type { MathFieldHandle } from './MathField.ts';
@@ -36,6 +41,8 @@ export interface Bounds {
 export interface SettingsPanelCallbacks {
   onChange(patch: Partial<SettingsValues>): void;
   onBoundsChange(patch: Partial<Bounds>): void;
+  /** Make one maths unit the same length on both axes. */
+  onZoomSquare(): void;
   /**
    * Evaluate a LaTeX fragment to a number, or NaN.
    *
@@ -52,8 +59,14 @@ export interface SettingsPanel {
   open(): void;
   close(): void;
   toggle(): void;
-  /** Push current values into the controls — called whenever the graph changes underneath. */
-  update(values: SettingsValues, bounds: Bounds): void;
+  /**
+   * Push current values into the controls — called whenever the graph changes underneath.
+   *
+   * `axesSquare` is not a setting, which is why it rides alongside rather than inside
+   * `SettingsValues`: it is a fact about the viewport, and all it does is decide whether the
+   * Zoom Square button has anything to offer.
+   */
+  update(values: SettingsValues, bounds: Bounds, axesSquare: boolean): void;
 }
 
 function section(...children: readonly HTMLElement[]): HTMLElement {
@@ -126,12 +139,24 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
   const numbers = checkbox('Axis Numbers', true, (v) => callbacks.onChange({ showAxisNumbers: v }));
   const minor = checkbox('Minor Gridlines', true, (v) => callbacks.onChange({ showMinorGridlines: v }));
 
+  const quadrant = checkbox('One Quadrant', true, (v) =>
+    callbacks.onChange({ restrictGridToFirstQuadrant: v }),
+  );
+
+  // A div, not a button: Desmos gives it role="button" and its own light-grey face, and it sits
+  // in the checkbox column rather than in a row of its own.
+  const zoomSquare = document.createElement('button');
+  zoomSquare.type = 'button';
+  zoomSquare.className = 'set-zoom-square';
+  zoomSquare.textContent = 'Zoom Square';
+  zoomSquare.addEventListener('click', () => callbacks.onZoomSquare());
+
   const gridLeft = document.createElement('div');
   gridLeft.className = 'set-grid-left';
   gridLeft.append(grid.row, arrows.row);
   const gridRight = document.createElement('div');
   gridRight.className = 'set-grid-right';
-  gridRight.append(numbers.row, minor.row);
+  gridRight.append(numbers.row, minor.row, quadrant.row, zoomSquare);
 
   const gridBlock = section(gridLeft, gridRight);
   gridBlock.classList.add('set-grid-group');
@@ -238,13 +263,17 @@ export function createSettingsPanel(callbacks: SettingsPanelCallbacks): Settings
       if (open) this.close();
       else this.open();
     },
-    update(values, bounds) {
+    update(values, bounds, axesSquare) {
       grid.input.checked = values.showGrid;
       minor.input.checked = values.showMinorGridlines;
       arrows.input.checked = values.showArrows;
       numbers.input.checked = values.showAxisNumbers;
-      // Minor gridlines are meaningless with the grid off, as in Desmos.
-      minor.input.disabled = !values.showGrid;
+      quadrant.input.checked = values.restrictGridToFirstQuadrant;
+      // Neither means anything with the grid off, and Desmos hides rather than disables them.
+      minor.row.hidden = !values.showGrid;
+      quadrant.row.hidden = !values.showGrid;
+      // Nothing to square when the axes already are.
+      zoomSquare.hidden = axesSquare;
 
       xAxis.visible.checked = values.showXAxis;
       yAxis.visible.checked = values.showYAxis;

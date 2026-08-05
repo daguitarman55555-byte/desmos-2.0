@@ -32,6 +32,8 @@ export interface AxisOptions {
   /** Desmos makes each axis name a checkbox that hides that axis line. */
   readonly showXAxis: boolean;
   readonly showYAxis: boolean;
+  /** "One Quadrant": clip the grid to x >= 0, y >= 0. Named for what it does — only the grid. */
+  readonly restrictGridToFirstQuadrant: boolean;
   readonly xAxisLabel: string;
   readonly yAxisLabel: string;
   readonly xAxisStep: number | null;
@@ -45,6 +47,7 @@ export const DEFAULT_AXIS_OPTIONS: AxisOptions = {
   showArrows: false,
   showXAxis: true,
   showYAxis: true,
+  restrictGridToFirstQuadrant: false,
   xAxisLabel: '',
   yAxisLabel: '',
   xAxisStep: null,
@@ -68,6 +71,20 @@ export function drawGrid(
   const [x0, x1, y0, y1] = view.bounds();
   const epsX = sx.minor * 1e-6;
   const epsY = sy.minor * 1e-6;
+
+  // "One Quadrant" clips the whole grid to x >= 0, y >= 0. Done as a canvas clip rather than by
+  // shortening every line, so the minor and major passes below stay identical either way. The
+  // axes are drawn afterwards and are deliberately outside this save/restore — Desmos restricts
+  // the grid only, as the setting's name says.
+  const clipped = options.restrictGridToFirstQuadrant;
+  if (clipped) {
+    const originX = view.toPX(0);
+    const originY = view.toPY(0);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(originX, 0, Math.max(0, view.width - originX), Math.max(0, originY));
+    ctx.clip();
+  }
 
   if (options.showMinorGridlines) {
     ctx.lineWidth = 1 / view.dpr;
@@ -102,6 +119,8 @@ export function drawGrid(
     ctx.lineTo(view.width, p);
   }
   ctx.stroke();
+
+  if (clipped) ctx.restore();
 }
 
 /** A filled triangle pointing along (dx, dy), which must be a unit vector. */

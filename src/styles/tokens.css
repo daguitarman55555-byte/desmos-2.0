@@ -268,6 +268,15 @@
   --seg-text: rgba(0, 0, 0, 0.85);
   --seg-radius: 3px;
 
+  /* Zoom Square: Desmos's `.dcg-action-zoom-square`, on its light-grey button face. */
+  --zsq-font-size: 80%;
+  --zsq-margin: 3px 0;
+  --zsq-pad: 3px 10px;
+  --zsq-line-height: 1.5em;
+  --zsq-bg: linear-gradient(#f6f6f6, #eff2f3);
+  --zsq-border: rgba(206, 206, 206, 0.8);
+  --zsq-emboss: inset 0 1px rgba(255, 255, 255, 0.25), inset 0 -1px rgba(0, 0, 0, 0.02);
+
   --settings-input-border: rgba(0, 0, 0, 0.42);
   --settings-input-radius: 5px;
   --settings-input-pad: 7px;
