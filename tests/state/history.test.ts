@@ -13,6 +13,8 @@ function styled(): Expression {
   const e = createExpression(1, 'y=x^2');
   e.colour = '#fa7e19';
   e.visible = false;
+  e.lines = false;
+  e.points = true;
   e.lineStyle = 'DASHED';
   e.pointStyle = 'STAR';
   e.lineWidth = 4;
@@ -30,6 +32,8 @@ describe('snapshotOf', () => {
       latex: 'y=x^2',
       colour: '#fa7e19',
       visible: false,
+      lines: false,
+      points: true,
       lineStyle: 'DASHED',
       pointStyle: 'STAR',
       lineWidth: 4,

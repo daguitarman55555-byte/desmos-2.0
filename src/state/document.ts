@@ -81,6 +81,17 @@ export interface Expression {
    */
   colour: string | null;
   visible: boolean;
+  /**
+   * Whether this expression draws its lines and its points at all.
+   *
+   * Separate from `visible`, which is the colour disc and hides the row's output wholesale.
+   * These two are the style tray's "Lines" and "Points" section toggles. For every expression
+   * kind that exists today exactly one of them applies — a curve has no points and a point has
+   * no lines — so the applicable one currently reads as a second way to hide the row, which is
+   * also true in Desmos. They stop being redundant as soon as a plotter draws both at once.
+   */
+  lines: boolean;
+  points: boolean;
   lineStyle: LineStyle;
   pointStyle: PointStyle;
   /** Empty string means "use the default", matching Desmos's own model. */
@@ -161,6 +172,7 @@ export interface GraphDocument {
 export function createExpression(id: number, latex = ''): Expression {
   return {
     id, latex, colour: null, visible: true,
+    lines: true, points: true,
     lineStyle: 'SOLID', pointStyle: 'POINT',
     lineWidth: null, pointSize: null,
     min: -10, max: 10, step: '', val: 0,

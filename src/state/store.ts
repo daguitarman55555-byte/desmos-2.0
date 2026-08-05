@@ -151,7 +151,12 @@ export class Store {
   }
 
   /** Apply a style change from the tray. */
-  setStyle(e: Expression, patch: Partial<Pick<Expression, 'colour' | 'lineStyle' | 'pointStyle' | 'lineWidth' | 'pointSize'>>): void {
+  setStyle(
+    e: Expression,
+    patch: Partial<
+      Pick<Expression, 'colour' | 'lines' | 'points' | 'lineStyle' | 'pointStyle' | 'lineWidth' | 'pointSize'>
+    >,
+  ): void {
     Object.assign(e, patch);
     this.markDirty();
   }

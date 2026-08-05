@@ -26,6 +26,8 @@ export interface ExpressionSnapshot {
   readonly max: number;
   readonly val: number;
   readonly visible: boolean;
+  readonly lines: boolean;
+  readonly points: boolean;
   readonly lineStyle: LineStyle;
   readonly pointStyle: PointStyle;
   readonly lineWidth: number | null;
@@ -42,6 +44,8 @@ export const snapshotOf = (expressions: readonly Expression[]): Snapshot =>
     max: e.max,
     val: e.val,
     visible: e.visible,
+    lines: e.lines,
+    points: e.points,
     lineStyle: e.lineStyle,
     pointStyle: e.pointStyle,
     lineWidth: e.lineWidth,

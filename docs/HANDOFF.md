@@ -182,14 +182,16 @@ panel width is not even in there, because it is computed per window.
 
 ## Next up, in the order I would take them
 
-### 1. Finish the style tray's two missing sections
-The geometry is now exact, but Desmos titles the last two sections **"Lines"** and **"Points"**
-and puts a **visibility toggle** in each title. Neither is built, because the document model has
-no per-lines/per-points visibility and an inert toggle would be a control that lies. Add
-`lines: boolean` and `points: boolean` to `Expression`, honour them in `drawables()`, then the
-titles and toggles can go in. Desmos also puts opacity and width/size math fields down the left
-of each of those sections — same gate, they need `lineOpacity`/`lineWidth`/`pointSize` wired
-through the renderer.
+### 1. The style tray's opacity and size fields
+The **"Lines"** and **"Points"** sections are built, titles and sliding toggles included, backed
+by real `lines` / `points` booleans on `Expression` that `drawables()` honours. What is still
+missing is the left-hand half of each: Desmos puts **opacity** and **width/size** math fields
+there. Those need `lineOpacity`, `lineWidth` and `pointSize` carried through the renderer —
+`Expression` already has the last two, but nothing reads them.
+
+Note the sections are mutually exclusive here on purpose: a curve has no points and a point has
+no lines, so exactly one shows. That stops being true the moment a plotter draws both at once
+(tables, point lists with connecting lines), and at that point both should show together.
 
 ### 2. The keypad's two remaining panels
 `functions` and `ABC` render **disabled**, alongside `Audio` which Desmos disables too. Each

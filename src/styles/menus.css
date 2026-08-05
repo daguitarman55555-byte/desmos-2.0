@@ -344,6 +344,43 @@
   border-top: 1px solid var(--settings-divider);
 }
 
+/* ---- section titles ----
+ * A name with a sliding toggle floated right. The real checkbox is hidden behind the drawn
+ * track, so keyboard and screen-reader behaviour come for free.
+ */
+.sty-title {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sty-title-gap);
+  margin-bottom: var(--sty-title-gap);
+  cursor: pointer; user-select: none;
+}
+.sty-title input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.sty-toggle {
+  flex: 0 0 auto; position: relative;
+  width: var(--sty-track-w); height: var(--sty-track-h);
+  background: var(--sty-track-bg);
+  border-radius: var(--sty-track-h);
+  transition: var(--sty-toggle-ease);
+}
+.sty-knob {
+  position: absolute; top: var(--sty-knob-top); left: 0;
+  width: var(--sty-knob); height: var(--sty-knob);
+  background: var(--sty-knob-bg);
+  border-radius: 50%;
+  box-shadow: var(--sty-knob-shadow);
+  transition: var(--sty-toggle-ease);
+}
+.sty-title:hover .sty-knob { background: var(--sty-knob-bg-hover); }
+.sty-title input:checked ~ .sty-toggle .sty-knob {
+  left: var(--sty-knob-travel);
+  background: var(--sty-knob-on);
+}
+.sty-title:hover input:checked ~ .sty-toggle .sty-knob { background: var(--sty-knob-on-hover); }
+.sty-title input:focus-visible ~ .sty-toggle {
+  outline: 2px solid var(--c-blue); outline-offset: 3px;
+}
+
 /* ---- colours: a six-column grid of rounded squares ---- */
 .sty-colours {
   display: grid;

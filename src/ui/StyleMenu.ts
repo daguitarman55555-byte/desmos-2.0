@@ -26,6 +26,9 @@ export interface StyleMenuCallbacks {
   onColour(colour: string): void;
   onLineStyle(style: LineStyle): void;
   onPointStyle(style: PointStyle): void;
+  /** The "Lines" and "Points" section toggles, which gate drawing rather than styling. */
+  onLinesVisible(visible: boolean): void;
+  onPointsVisible(visible: boolean): void;
 }
 
 export interface StyleMenu {
@@ -59,6 +62,38 @@ function trayButton(className: string, title: string, onClick: () => void): HTML
 
 const titleCase = (s: string): string => s.charAt(0) + s.slice(1).toLowerCase();
 
+/**
+ * A section header: a name on the left, a sliding toggle floated right.
+ *
+ * Desmos's toggle is a 30x10 track with an 18px knob that slides 12px — not a checkbox. Built
+ * from a real `input[type=checkbox]` so it keeps keyboard and screen-reader behaviour for free,
+ * with the input itself hidden behind the drawn track.
+ */
+function sectionTitle(
+  name: string,
+  onToggle: (on: boolean) => void,
+): { row: HTMLElement; input: HTMLInputElement } {
+  const row = document.createElement('label');
+  row.className = 'sty-title';
+
+  const text = document.createElement('span');
+  text.textContent = name;
+
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  // mousedown would fire before the checkbox flips, so this one listens for the change itself.
+  input.addEventListener('change', () => onToggle(input.checked));
+
+  const track = document.createElement('span');
+  track.className = 'sty-toggle';
+  const knob = document.createElement('span');
+  knob.className = 'sty-knob';
+  track.appendChild(knob);
+
+  row.append(text, input, track);
+  return { row, input };
+}
+
 export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
   const element = document.createElement('div');
   element.className = 'popover sty-menu';
@@ -72,15 +107,17 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
 
   const lineSection = document.createElement('div');
   lineSection.className = 'sty-section';
+  const lineTitle = sectionTitle('Lines', (on) => callbacks.onLinesVisible(on));
   const lineRow = document.createElement('div');
   lineRow.className = 'sty-seg sty-lines';
-  lineSection.appendChild(lineRow);
+  lineSection.append(lineTitle.row, lineRow);
 
   const pointSection = document.createElement('div');
   pointSection.className = 'sty-section';
+  const pointTitle = sectionTitle('Points', (on) => callbacks.onPointsVisible(on));
   const pointGrid = document.createElement('div');
   pointGrid.className = 'sty-points';
-  pointSection.appendChild(pointGrid);
+  pointSection.append(pointTitle.row, pointGrid);
 
   element.append(colourSection, lineSection, pointSection);
 
@@ -99,6 +136,17 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
       colourGrid.appendChild(b);
     }
 
+    // A point expression has no lines to style and a curve has no points, so exactly one of the
+    // two sections is relevant — which is how Desmos shows them.
+    lineSection.hidden = showPoints;
+    pointSection.hidden = !showPoints;
+
+    lineTitle.input.checked = expression.lines;
+    pointTitle.input.checked = expression.points;
+    // Desmos collapses a section's contents when its toggle is off, leaving the title behind.
+    lineRow.hidden = !expression.lines;
+    pointGrid.hidden = !expression.points;
+
     lineRow.innerHTML = '';
     for (const style of LINE_STYLES) {
       const b = trayButton('sty-seg-btn', titleCase(style), () => callbacks.onLineStyle(style));
@@ -107,7 +155,6 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
       lineRow.appendChild(b);
     }
 
-    pointSection.hidden = !showPoints;
     pointGrid.innerHTML = '';
     if (showPoints) {
       for (const style of POINT_STYLES) {

@@ -107,6 +107,8 @@ async function boot(): Promise<void> {
     onColour: (colour) => applyStyle({ colour }),
     onLineStyle: (lineStyle) => applyStyle({ lineStyle }),
     onPointStyle: (pointStyle) => applyStyle({ pointStyle }),
+    onLinesVisible: (lines) => applyStyle({ lines }),
+    onPointsVisible: (points) => applyStyle({ points }),
   });
   shell.panel.appendChild(styleMenu.element);
 
@@ -171,6 +173,9 @@ async function boot(): Promise<void> {
       const analysis = store.analyses.get(e.id);
       if (!analysis?.fn || analysis.error || analysis.kind === null) continue;
       if (!e.visible || e.latex.trim() === '') continue;
+      // The tray's Lines and Points toggles. Each expression draws one or the other, so only
+      // the toggle matching its kind can suppress it.
+      if (analysis.kind === 'point' ? !e.points : !e.lines) continue;
       out.push({
         id: e.id,
         kind: analysis.kind,
@@ -280,6 +285,8 @@ async function boot(): Promise<void> {
           created.max = s.max;
           created.val = s.val;
           created.visible = s.visible;
+          created.lines = s.lines;
+          created.points = s.points;
           created.lineStyle = s.lineStyle;
           created.pointStyle = s.pointStyle;
           created.lineWidth = s.lineWidth;
