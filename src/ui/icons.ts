@@ -4,7 +4,7 @@
 // — these were traced against Desmos captures and small changes are visible at 100% zoom.
 
 import { dashPattern } from '../state/document.ts';
-import type { LineStyle, PointStyle } from '../state/document.ts';
+import type { LineStyle, LoopMode, PointStyle } from '../state/document.ts';
 
 export const openGraphIcon = `
 <svg width="20" height="25" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -279,9 +279,59 @@ export function playIcon(light: boolean): string {
   </svg>`;
 }
 
+/** The same disc, showing the pair of bars, while the slider is animating. */
+export function pauseIcon(light: boolean): string {
+  const c = light ? '#fff' : '#7d7d7d';
+  return `<svg viewBox="0 0 30 30" width="100%" height="100%">
+    <circle cx="15" cy="15" r="13.2" fill="none" stroke="${c}" stroke-width="1.7"/>
+    <rect x="10.6" y="9.6" width="3.2" height="10.8" rx="0.5" fill="${c}"/>
+    <rect x="16.2" y="9.6" width="3.2" height="10.8" rx="0.5" fill="${c}"/>
+  </svg>`;
+}
+
+/**
+ * The loop-mode control beneath the play button.
+ *
+ * Desmos's three glyphs are `dcg-icon-arrow-two-way`, `-one-way` and `-once`, which is also the
+ * evidence that the button cycles three modes and not the four the enum holds.
+ */
 export function swapIcon(light: boolean): string {
   const c = light ? '#fff' : '#7d7d7d';
   return `<svg viewBox="0 0 26 26" width="100%" height="100%" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3.5 9.5h19M18.5 5.5l4 4-4 4"/><path d="M22.5 16.5h-19M7.5 12.5l-4 4 4 4"/>
   </svg>`;
+}
+
+/** One arrow, always the same way: LOOP_FORWARD wraps back to the start rather than turning. */
+function oneWayIcon(light: boolean): string {
+  const c = light ? '#fff' : '#7d7d7d';
+  return `<svg viewBox="0 0 26 26" width="100%" height="100%" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.5 13h19M18.5 9l4 4-4 4"/>
+  </svg>`;
+}
+
+/** One arrow into a stop bar: PLAY_ONCE halts at the far end. */
+function onceIcon(light: boolean): string {
+  const c = light ? '#fff' : '#7d7d7d';
+  return `<svg viewBox="0 0 26 26" width="100%" height="100%" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.5 13h14M12.5 9l4 4-4 4"/><path d="M21 6.5v13"/>
+  </svg>`;
+}
+
+export function loopIcon(mode: LoopMode, light: boolean): string {
+  switch (mode) {
+    case 'LOOP_FORWARD_REVERSE':
+      return swapIcon(light);
+    case 'LOOP_FORWARD':
+      return oneWayIcon(light);
+    case 'PLAY_ONCE':
+      return onceIcon(light);
+    // Not reachable from the button, but the enum carries it. Desmos shows the one-way arrow.
+    case 'PLAY_INDEFINITELY':
+      return oneWayIcon(light);
+    default: {
+      const never: never = mode;
+      return never;
+    }
+  }
 }

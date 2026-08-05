@@ -22,11 +22,15 @@ function styled(): Expression {
   e.min = -3;
   e.max = 7;
   e.val = 2;
+  e.playing = true;
+  e.playDirection = -1;
+  e.loopMode = 'PLAY_ONCE';
+  e.animationPeriod = 2000;
   return e;
 }
 
 describe('snapshotOf', () => {
-  it('carries every field the style tray can write', () => {
+  it('carries every field the style tray and the animation controls can write', () => {
     const [snap] = snapshotOf([styled()]);
     expect(snap).toEqual({
       latex: 'y=x^2',
@@ -41,6 +45,10 @@ describe('snapshotOf', () => {
       min: -3,
       max: 7,
       val: 2,
+      playing: true,
+      playDirection: -1,
+      loopMode: 'PLAY_ONCE',
+      animationPeriod: 2000,
     });
   });
 

@@ -4,7 +4,7 @@
 // undo walk back a character at a time. The same position drives the toolbar arrows' enabled
 // state, so there is one source of truth for both.
 
-import type { Expression, LineStyle, PointStyle } from './document.ts';
+import type { Expression, LineStyle, LoopMode, PlayDirection, PointStyle } from './document.ts';
 
 /** Milliseconds of quiet before a snapshot is taken. */
 export const SNAPSHOT_DEBOUNCE_MS = 450;
@@ -32,6 +32,18 @@ export interface ExpressionSnapshot {
   readonly pointStyle: PointStyle;
   readonly lineWidth: number | null;
   readonly pointSize: number | null;
+  /**
+   * Animation state, motion included.
+   *
+   * Carrying `playing` looks odd next to the styling fields, but undo restores the state the
+   * document was in, and "a slider was running" is part of that. The unquantised target is not
+   * here on purpose — it is motion the tick loop owns, and restarting mid-sweep from the
+   * displayed value is indistinguishable from restarting from the target.
+   */
+  readonly playing: boolean;
+  readonly playDirection: PlayDirection;
+  readonly loopMode: LoopMode;
+  readonly animationPeriod: number;
 }
 
 export type Snapshot = readonly ExpressionSnapshot[];
@@ -50,6 +62,10 @@ export const snapshotOf = (expressions: readonly Expression[]): Snapshot =>
     pointStyle: e.pointStyle,
     lineWidth: e.lineWidth,
     pointSize: e.pointSize,
+    playing: e.playing,
+    playDirection: e.playDirection,
+    loopMode: e.loopMode,
+    animationPeriod: e.animationPeriod,
   }));
 
 export class History {

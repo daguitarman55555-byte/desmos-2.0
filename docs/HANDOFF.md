@@ -1,6 +1,6 @@
 # Desmos 2.0 — handoff
 
-Everything committed, working tree clean. **138 tests pass, both typechecks clean.**
+Everything committed, working tree clean. **208 tests pass, both typechecks clean.**
 
 ---
 
@@ -101,8 +101,8 @@ Chrome tab — DesModder only touches desmos.com, so screenshotting *our* app th
 | `core/` | Complete for milestone 1: lang, eval, numerics/roots, poi. Zero DOM, enforced by `tsconfig.core.json` |
 | `graph/` | Complete: transform, viewport, grid, axes, plotters, pick, trace, renderer |
 | `state/` | Complete: document, store, history, selection, persist (serialise only) |
-| `ui/` | Shell, header, toolbar, expression list/row, slider, math field, graph pane, point labels, settings panel, **style tray (geometry now measured)**, **keypad** |
-| Tests | 138, in `tests/` mirroring `src/core/` plus `tests/graph` and `tests/state` |
+| `ui/` | Shell, header, toolbar, expression list/row, slider **incl. animation**, math field, graph pane, point labels, settings panel, **style tray (geometry now measured)**, **keypad** |
+| Tests | 208, in `tests/` mirroring `src/core/` plus `tests/graph` and `tests/state` |
 
 ### Measured facts now encoded in the code
 
@@ -180,21 +180,14 @@ panel width is not even in there, because it is computed per window.
 
 ---
 
-## Slider animation — measured, not yet built
+## Slider animation — built
 
-The "add slider:" prompt is built (`undefinedVariables` on `Analysis` → the prompt in
-`ExpressionRow` → `onCreateSliders` in `main.ts`). **Animating a slider is not.** The play glyph
-already renders on every variable-definition row and does nothing; `swapIcon` beside it is
-Desmos's loop-mode control and is likewise inert. Everything needed was read out of Desmos's
-bundle:
+Both index-cell glyphs on a variable-definition row are live: the disc plays and pauses, the one
+below it cycles the loop mode. The stepping maths is pure in `state/document.ts` (`stepSlider`,
+`quantiseSlider`, `sliderDecimals`, `nextLoopMode`) with 27 tests in
+`tests/state/slider-animation.test.ts`; the clock is `startAnimation()` in `main.ts`.
 
-```
-animationPeriod = 4000 ms          // a full min→max sweep
-loopMode        = LOOP_FORWARD_REVERSE   // the default; bounces at both ends
-playDirection   = +1
-```
-
-Its per-frame step, from `yB(o, e)` in the bundle:
+The spec, transcribed from `yB(o, e)` in Desmos's bundle and now encoded:
 
 ```
 dt      = min(now - lastTick, period / 10)     // a long frame gap is clamped, not applied
@@ -204,12 +197,31 @@ target  = clamp(target, min - halfStep, max + halfStep)   // halfStep = step ? s
 value   = quantise(target, step)
 ```
 
-Direction, for `LOOP_FORWARD_REVERSE`: `if (target >= max) playDirection = -1; else if
-(target <= min) playDirection = +1`. The other three modes are `LOOP_FORWARD` (wraps
-`max + halfStep` → `min - halfStep`), `PLAY_ONCE`, and `PLAY_INDEFINITELY` (no upper bound;
-steps by `dt / (period / 4)`). Their icons are `dcg-icon-arrow-two-way`, `-one-way`, `-once`.
+with `animationPeriod = 4000 ms`, `loopMode = LOOP_FORWARD_REVERSE` and `playDirection = +1` as
+the defaults, and `min: -10, max: 10, step: ""` unchanged. `LOOP_FORWARD` wraps
+`max + halfStep` → `min - halfStep`; `PLAY_ONCE` stops on the bound; `PLAY_INDEFINITELY` has no
+upper bound and steps by `dt / (period / 4)`.
 
-Sliders default to `min: -10, max: 10, step: ""` — which `document.ts` already matches.
+Four things worth knowing before touching it:
+
+- **The frame clamp is far more aggressive than it looks.** `period / 10` on the default slider
+  is 400 ms, so *no frame can ever move more than a tenth of the range* — a full sweep is at
+  least ten frames however badly the tab stalls. Tests written assuming a 1000 ms frame moves a
+  quarter of the range are wrong; that was the first thing this got caught on.
+- **Only three of the four loop modes are reachable.** The button cycles
+  `LOOP_FORWARD_REVERSE → LOOP_FORWARD → PLAY_ONCE`, which is why Desmos ships exactly three
+  icons (`dcg-icon-arrow-two-way`, `-one-way`, `-once`). `PLAY_INDEFINITELY` is Desmos's mode for
+  a slider with no finite bound, which cannot be built here yet; `stepSlider` handles it anyway.
+- **The unquantised target is deliberately not on `Expression`.** It lives in a `Map` in
+  `main.ts`. A frame's step is routinely smaller than the value's own precision, so storing only
+  the rounded value would round the motion away every frame and the slider would never move.
+- **Animated values are rounded to a range-derived precision**, not a fixed two places:
+  `sliderDecimals` keeps about a thousand distinct values across whatever range the slider has,
+  which happens to land on two places for the default −10…10 and so agrees with the drag handle.
+  A slider running 0…0.01 would otherwise be frozen solid. A step overrides it with its own.
+
+Still not built: the **animation period is per expression but has no UI** — Desmos exposes it
+through the slider's context menu, which does not exist here, so every slider runs at 4000 ms.
 
 ---
 
@@ -267,6 +279,10 @@ Do not build them and do not re-add them to this list.
   live Desmos renders exactly one row when empty, and `expressions + 1` once anything is typed,
   because a blank last row *is* its new-expression row. Our behaviour already matches. Verified
   against live Desmos — do not "fix" this.
+- **A running animation pushes no undo steps, on purpose.** Each frame calls the *debounced*
+  `scheduleSnapshot`, so the timer never fires while the slider is moving and exactly one
+  snapshot lands 450 ms after it stops. Swapping that for `history.push` would fill the history
+  with sixty steps a second.
 - **Anything added to `Expression` must be added to `ExpressionSnapshot` too.** Restoring rebuilds
   every expression with `store.create()`, so a field missing from the snapshot silently reverts to
   its default on the next undo. That is what used to happen to line and point styles: one undo

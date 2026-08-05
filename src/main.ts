@@ -24,6 +24,7 @@ import { History, snapshotOf } from './state/history.ts';
 import type { Snapshot } from './state/history.ts';
 import { Selection } from './state/selection.ts';
 import { Store } from './state/store.ts';
+import { nextLoopMode, stepSlider } from './state/document.ts';
 import type { Expression } from './state/document.ts';
 import { createExpressionList } from './ui/ExpressionList.ts';
 import type { RowCallbacks } from './ui/ExpressionRow.ts';
@@ -261,6 +262,62 @@ async function boot(): Promise<void> {
     draw();
   }
 
+  // ── Slider animation ───────────────────────────────────────────────────────────────────────
+  //
+  // The stepping maths is pure and lives in state/document.ts; this is only the clock.
+  //
+  // Unquantised targets are held here rather than on the expression because they are motion, not
+  // document: a frame's step can be smaller than the value's own precision, and rounding it away
+  // every frame would leave the slider stuck. One rAF loop drives every playing slider, and it
+  // stops itself the moment none is playing rather than idling at 60 Hz over a still document.
+
+  const targets = new Map<number, number>();
+  let animationFrame = 0;
+
+  function startAnimation(): void {
+    if (animationFrame) return;
+    let previous = performance.now();
+    const frame = (now: number): void => {
+      animationFrame = 0;
+      const elapsed = now - previous;
+      previous = now;
+
+      const changed: number[] = [];
+      for (const e of store.expressions) {
+        if (!e.playing) continue;
+        // Editing the row out of being a variable definition stops it; nothing else would.
+        if (store.analyses.get(e.id)?.kind !== 'slider') {
+          e.playing = false;
+          continue;
+        }
+
+        const next = stepSlider(e, { target: targets.get(e.id) ?? e.val, direction: e.playDirection }, elapsed);
+        targets.set(e.id, next.target);
+        e.playDirection = next.direction;
+        e.playing = next.playing;
+        if (next.value !== e.val) {
+          store.setSliderValue(e, next.value);
+          changed.push(e.id);
+        }
+      }
+
+      if (changed.length) {
+        renderList();
+        for (const id of changed) {
+          const e = store.expressions.find((x) => x.id === id);
+          if (e) list.rowFor(id)?.math.setLatexQuietly(e.latex);
+        }
+        draw();
+        // Debounced, so a running animation never pushes a step — one lands 450ms after it stops.
+        scheduleSnapshot();
+      }
+
+      if (store.expressions.some((e) => e.playing)) animationFrame = requestAnimationFrame(frame);
+      else renderList();     // the disc goes back to the play glyph
+    };
+    animationFrame = requestAnimationFrame(frame);
+  }
+
   // ── Focus and history ──────────────────────────────────────────────────────────────────────
 
   function focusRow(expression: Expression, toEnd: boolean): void {
@@ -294,9 +351,17 @@ async function boot(): Promise<void> {
           created.pointStyle = s.pointStyle;
           created.lineWidth = s.lineWidth;
           created.pointSize = s.pointSize;
+          created.playing = s.playing;
+          created.playDirection = s.playDirection;
+          created.loopMode = s.loopMode;
+          created.animationPeriod = s.animationPeriod;
           return created;
         }),
       );
+      // Restore rebuilds with fresh ids, so the old targets belong to expressions that no longer
+      // exist; the loop reseeds from each row's value on its first frame.
+      targets.clear();
+      if (store.expressions.some((e) => e.playing)) startAnimation();
       selection.focusedId = null;
       renderList();
       // Rows exist now; push the latex into each field without re-triggering edit handlers.
@@ -356,11 +421,34 @@ async function boot(): Promise<void> {
         focusRow(expression, true);
       },
       onToggleVisible() {
-        // A variable definition has no curve to hide; its icon is the animation control.
-        if (store.analyses.get(expression.id)?.kind === 'slider') return;
+        // A variable definition has no curve to hide, and the row routes its disc to
+        // onTogglePlaying instead — so anything arriving here has something to hide.
         expression.visible = !expression.visible;
         renderList();
         draw();
+      },
+      onTogglePlaying() {
+        const playing = !expression.playing;
+        expression.playing = playing;
+        if (playing) {
+          let target = expression.val;
+          // Replaying a finished PLAY_ONCE would otherwise stop again on its first frame.
+          if (expression.loopMode === 'PLAY_ONCE') {
+            if (expression.playDirection > 0 && target >= expression.max) target = expression.min;
+            else if (expression.playDirection < 0 && target <= expression.min) target = expression.max;
+          }
+          targets.set(expression.id, target);
+          startAnimation();
+        } else {
+          targets.delete(expression.id);
+        }
+        renderList();
+      },
+      onCycleLoopMode() {
+        expression.loopMode = nextLoopMode(expression.loopMode);
+        store.markDirty();
+        renderList();
+        history.push(snapshotOf(store.expressions));
       },
       onStyleMenu(anchor) {
         const analysis = store.analyses.get(expression.id);

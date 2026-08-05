@@ -72,6 +72,42 @@ export const DASH_PATTERNS: Readonly<Record<LineStyle, readonly number[]>> = {
 export const dashPattern = (style: LineStyle, width: number): number[] =>
   DASH_PATTERNS[style].map((m) => m * width);
 
+/**
+ * What a slider animation does when it reaches a bound. Desmos's own enum.
+ *
+ * Only the first three are reachable from the UI — the loop-mode button cycles those, and its
+ * three icons are the tell that there is no fourth. Desmos uses `PLAY_INDEFINITELY` for a slider
+ * with no finite bound, which cannot be built here yet; the stepper handles it anyway so the case
+ * is not silently wrong the day it becomes reachable.
+ */
+export type LoopMode = 'LOOP_FORWARD_REVERSE' | 'LOOP_FORWARD' | 'PLAY_ONCE' | 'PLAY_INDEFINITELY';
+
+/** The modes the loop button cycles through, in order. */
+export const CYCLED_LOOP_MODES: readonly LoopMode[] = [
+  'LOOP_FORWARD_REVERSE',
+  'LOOP_FORWARD',
+  'PLAY_ONCE',
+];
+
+export const nextLoopMode = (mode: LoopMode): LoopMode => {
+  const i = CYCLED_LOOP_MODES.indexOf(mode);
+  return CYCLED_LOOP_MODES[(i + 1) % CYCLED_LOOP_MODES.length] as LoopMode;
+};
+
+/** +1 sweeps towards max, −1 back towards min. */
+export type PlayDirection = 1 | -1;
+
+/** Milliseconds for one full min→max sweep. Read out of Desmos's bundle. */
+export const DEFAULT_ANIMATION_PERIOD = 4000;
+
+/**
+ * A frame gap longer than a tenth of the period is clamped to it rather than applied.
+ *
+ * This is Desmos's, and it is what stops a backgrounded tab or a slow recompute from teleporting
+ * the slider: the animation goes slow-motion instead of skipping.
+ */
+export const MAX_FRAME_FRACTION = 10;
+
 export interface Expression {
   readonly id: number;
   latex: string;
@@ -102,6 +138,12 @@ export interface Expression {
   max: number;
   step: string;
   val: number;
+  /** Whether the slider is currently animating. */
+  playing: boolean;
+  playDirection: PlayDirection;
+  loopMode: LoopMode;
+  /** Milliseconds for one full sweep. Per expression, as in Desmos. */
+  animationPeriod: number;
 }
 
 export interface GraphView {
@@ -176,7 +218,155 @@ export function createExpression(id: number, latex = ''): Expression {
     lineStyle: 'SOLID', pointStyle: 'POINT',
     lineWidth: null, pointSize: null,
     min: -10, max: 10, step: '', val: 0,
+    playing: false, playDirection: 1,
+    loopMode: 'LOOP_FORWARD_REVERSE', animationPeriod: DEFAULT_ANIMATION_PERIOD,
   };
 }
 
 export const isBlank = (e: Expression): boolean => e.latex.trim() === '';
+
+// ── Slider animation ─────────────────────────────────────────────────────────────────────────
+//
+// Pure, so the stepping can be tested against known values in plain Node. The tick loop that
+// drives it is UI and lives in main.ts.
+//
+// The unquantised `target` is deliberately not part of `Expression`. A step smaller than the
+// slider's quantum would be rounded away every frame and the slider would never move, so the
+// motion has to carry more precision than the value the row displays.
+
+/** Everything the stepper needs from an expression. `Expression` satisfies it structurally. */
+export interface SliderBounds {
+  readonly min: number;
+  readonly max: number;
+  readonly step: string;
+  readonly loopMode: LoopMode;
+  readonly animationPeriod: number;
+}
+
+export interface SliderMotion {
+  /** Carry this into the next frame. */
+  readonly target: number;
+  readonly direction: PlayDirection;
+  /** What the row should display — `target` snapped to the step and held inside the bounds. */
+  readonly value: number;
+  /** False once PLAY_ONCE has reached its end. */
+  readonly playing: boolean;
+}
+
+/** The slider's quantum, or 0 when the step field is blank or nonsense. */
+export const sliderStepSize = (step: string): number => {
+  const n = parseFloat(step);
+  return isFinite(n) && n > 0 ? n : 0;
+};
+
+/**
+ * Decimal places an animated value is rounded to before it is written back as latex.
+ *
+ * A fixed precision cannot serve every range: two places is right for the default −10…10 but
+ * would freeze a slider running 0…0.01 solid. This keeps roughly a thousand distinct values
+ * across whatever range the slider has, which lands on two places for the default — the same
+ * precision the drag handle already quantises to.
+ */
+export function sliderDecimals(bounds: SliderBounds): number {
+  const step = sliderStepSize(bounds.step);
+  // With a step set, the step is the precision: rounding to the range's would destroy a fine one.
+  const quantum = step > 0 ? step : Math.abs(bounds.max - bounds.min) / 1000;
+  if (!isFinite(quantum) || quantum <= 0) return 2;
+  return Math.min(12, Math.max(0, Math.ceil(-Math.log10(quantum))));
+}
+
+const roundTo = (value: number, decimals: number): number => {
+  const scale = 10 ** decimals;
+  return Math.round(value * scale) / scale;
+};
+
+/**
+ * Snap a target to the step and hold it inside the bounds.
+ *
+ * The bounds clamp matters because the target is deliberately allowed to overshoot by half a
+ * step — that is what gives the two extreme values the same dwell time as every value between
+ * them — and a snapped overshoot could otherwise land one whole step outside the range.
+ */
+export function quantiseSlider(target: number, bounds: SliderBounds, clamp = true): number {
+  const step = sliderStepSize(bounds.step);
+  const snapped = step > 0 ? Math.round(target / step) * step : target;
+  const held = clamp ? Math.min(Math.max(snapped, bounds.min), bounds.max) : snapped;
+  return roundTo(held, sliderDecimals(bounds));
+}
+
+/**
+ * Advance an animating slider by one frame.
+ *
+ * Transcribed from `yB(o, e)` in Desmos's bundle: the frame gap is clamped before it is applied,
+ * the step is a fraction of the *range* rather than a fixed rate, and the bound the slider turns
+ * at is half a step outside the range.
+ */
+export function stepSlider(
+  bounds: SliderBounds,
+  motion: { readonly target: number; readonly direction: PlayDirection },
+  elapsedMs: number,
+): SliderMotion {
+  const period = bounds.animationPeriod > 0 ? bounds.animationPeriod : DEFAULT_ANIMATION_PERIOD;
+  const dt = Math.max(0, Math.min(elapsedMs, period / MAX_FRAME_FRACTION));
+
+  if (bounds.loopMode === 'PLAY_INDEFINITELY') {
+    // Nothing to sweep towards, so the rate is flat rather than a fraction of a range: one unit
+    // per quarter period. Nothing clamps it either — that is the point of the mode.
+    const target = motion.target + (dt / (period / 4)) * motion.direction;
+    return {
+      target,
+      direction: motion.direction,
+      value: quantiseSlider(target, bounds, false),
+      playing: true,
+    };
+  }
+
+  const { min, max } = bounds;
+  // An inverted or infinite range has nowhere to sweep. Stopping beats spinning a frame loop
+  // that can never change anything.
+  if (!isFinite(min) || !isFinite(max) || max <= min) {
+    return {
+      target: motion.target,
+      direction: motion.direction,
+      value: quantiseSlider(motion.target, bounds),
+      playing: false,
+    };
+  }
+
+  const halfStep = sliderStepSize(bounds.step) / 2;
+  let target = motion.target + (max - min) * (dt / period) * motion.direction;
+  let direction = motion.direction;
+  let playing = true;
+
+  switch (bounds.loopMode) {
+    case 'LOOP_FORWARD_REVERSE':
+      target = Math.min(Math.max(target, min - halfStep), max + halfStep);
+      if (target >= max) direction = -1;
+      else if (target <= min) direction = 1;
+      break;
+
+    case 'LOOP_FORWARD':
+      // Wraps rather than turns. The two half-step overshoots are the same one bound seen from
+      // either end, so leaving from one arrives at the other with no value skipped.
+      if (target > max + halfStep) target = min - halfStep;
+      else if (target < min - halfStep) target = max + halfStep;
+      break;
+
+    case 'PLAY_ONCE':
+      if (direction > 0 && target >= max) {
+        target = max;
+        playing = false;
+      } else if (direction < 0 && target <= min) {
+        target = min;
+        playing = false;
+      }
+      break;
+
+    default: {
+      const never: never = bounds.loopMode;
+      return never;
+    }
+  }
+
+  return { target, direction, value: quantiseSlider(target, bounds), playing };
+}

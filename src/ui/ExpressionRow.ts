@@ -8,7 +8,7 @@ import { createMathField } from './MathField.ts';
 import type { MathFieldHandle } from './MathField.ts';
 import { createSlider } from './Slider.ts';
 import type { SliderRow } from './Slider.ts';
-import { curveIcon, deleteIcon, playIcon, pointIcon, swapIcon, warnIcon } from './icons.ts';
+import { curveIcon, deleteIcon, loopIcon, pauseIcon, playIcon, pointIcon, warnIcon } from './icons.ts';
 import { GRAPHED_KINDS } from '../core/lang/analyze.ts';
 import type { Analysis } from '../core/lang/analyze.ts';
 import type { Expression } from '../state/document.ts';
@@ -21,6 +21,10 @@ export interface RowCallbacks {
   onDeleteOutOfLeft(): void;
   onFocusRequest(): void;
   onToggleVisible(): void;
+  /** The same cell on a variable-definition row: start or stop the slider animation. */
+  onTogglePlaying(): void;
+  /** The second index-cell glyph: step to the next loop mode. */
+  onCycleLoopMode(): void;
   /** Long press on the colour disc: open the style tray anchored to it. */
   onStyleMenu(anchor: HTMLElement): void;
   onDelete(): void;
@@ -153,6 +157,10 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
   // style tray. They share one element, so they are told apart by how long the button is held.
   let pressTimer: ReturnType<typeof setTimeout> | null = null;
   let openedTray = false;
+  // What the index cell currently *is*. On a variable-definition row the disc is the animation
+  // control, not a visibility toggle, so the click has to be routed by kind and the kind is only
+  // known at update time.
+  let variableRow = false;
 
   const cancelPress = (): void => {
     if (pressTimer !== null) clearTimeout(pressTimer);
@@ -174,9 +182,17 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
     if (pressTimer !== null) {
       // Released before the tray opened, so this was a plain click.
       cancelPress();
-      callbacks.onToggleVisible();
+      if (variableRow) callbacks.onTogglePlaying();
+      else callbacks.onToggleVisible();
     }
     openedTray = false;
+  });
+
+  // The loop-mode glyph has no long press — one click, one step through the modes.
+  icon2.addEventListener('mousedown', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    callbacks.onCycleLoopMode();
   });
 
   icon.addEventListener('mouseleave', () => {
@@ -211,6 +227,7 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
       const errored = analysis?.error ?? false;
 
       const isVariableDefinition = kind === 'slider';
+      variableRow = isVariableDefinition;
       const isGraphed = kind !== null && GRAPHED_KINDS.has(kind) && hasContent && !errored;
       const hasSlider = hasContent && !errored && !!analysis?.sliderKind;
       const showError = hasContent && errored;
@@ -222,8 +239,8 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
         icon.innerHTML = warnIcon();
       } else if (isVariableDefinition) {
         // On a focused row the index cell turns blue, so the glyphs invert to stay legible.
-        icon.innerHTML = playIcon(focused);
-        icon2.innerHTML = swapIcon(focused);
+        icon.innerHTML = expression.playing ? pauseIcon(focused) : playIcon(focused);
+        icon2.innerHTML = loopIcon(expression.loopMode, focused);
       } else if (isGraphed) {
         // Desmos uses a different glyph per kind, and both track the expression's style.
         const colour = expression.colour ?? '#000';
