@@ -141,26 +141,48 @@ Do not re-derive these; they were each measured, several contradict the obvious 
   the columns aligned. Counterintuitively **the digits are the darker keys and the operators are
   white** — check a screenshot before "fixing" that.
 
-### One measured fact that is now in doubt
+### The panel width is a formula, not a constant — and this was settled the hard way
 
-**`--panel-width: 448px` did not reproduce.** Live Desmos, extension-free, at both 800px and
-1440px viewport widths, reads `.dcg-exppanel-outer` = 416px wide with `.dcg-grapher` starting at
-x=416. That is a flat contradiction of the 448 currently encoded in `tokens.css` and asserted
-above. It was left alone rather than changed, because it moves the whole layout and the earlier
-measurement may have been taken under conditions I could not reproduce (browser zoom is the
-obvious suspect, though 448/416 = 1.077 is not a clean ratio). **Resolve this before trusting any
-panel-relative metric.**
+Two sessions measured the expression panel and got 448px and 416px. **Both were right.** The
+width is not a constant at all; it is read out of Desmos's own `getExpListWidth()`:
 
-All pixel values live in `src/styles/tokens.css`. Components must never hardcode one.
+```
+panelWidth = clamp(0.2 * containerWidth + 160, 320, 500)
+```
+
+448 is that formula's value at a 1440px window, 416 its value at 1280. Confirmed by calling
+Desmos's own function across thirteen viewport sizes, and now implemented in
+`expressionPanelWidth()` in `src/ui/shell.ts` with `tests/ui/panel-width.test.ts` pinning the
+values Desmos actually returns. Three details that come with it:
+
+- **Below a 450px container Desmos stops putting the panel beside the graph** and stacks it
+  underneath (`isNarrow()`). Not implemented; the breakpoint is recorded as
+  `PANEL_NARROW_WIDTH` so it is not rediscovered.
+- **Dragging the divider is remembered, not recomputed.** Desmos keeps the dragged width and
+  only re-clamps it to `[320, containerWidth − 200]` as the window changes — so the graph always
+  keeps 200px, and a dragged panel may exceed the formula's 500px cap.
+- **The panel snaps up to 10px to make the graph exactly square.** At 1280×860 the formula says
+  416 but Desmos returns 420, leaving an 860×860 graph. Real, and easy to mistake for a bug.
+
+**The lesson, which is the reusable part: check whether a "constant" is computed before recording
+it as measured.** No CSS rule sets this width — Desmos assigns it inline from JS, so reading the
+stylesheet finds nothing and only the bundle has the answer. Anything set inline is suspect.
+
+A caveat on measuring this in the in-app pane: `Calc.controller.layoutMeasurements` is
+`{width: 0, height: 0}` there, because the pane never composites and the ResizeObserver feeding
+it never delivers. Desmos then lays out as if the container were tiny — the container even
+carries `dcg-narrow`. **Any panel measurement taken from that DOM is meaningless.** Set
+`layoutMeasurements` yourself and call `getExpListWidth()` instead; that is what produced the
+table above.
+
+All pixel values live in `src/styles/tokens.css`. Components must never hardcode one — and the
+panel width is not even in there, because it is computed per window.
 
 ---
 
 ## Next up, in the order I would take them
 
-### 1. Settle the panel width
-See the doubt raised above. Everything else is downstream of it.
-
-### 2. Finish the style tray's two missing sections
+### 1. Finish the style tray's two missing sections
 The geometry is now exact, but Desmos titles the last two sections **"Lines"** and **"Points"**
 and puts a **visibility toggle** in each title. Neither is built, because the document model has
 no per-lines/per-points visibility and an inert toggle would be a control that lies. Add
@@ -169,13 +191,13 @@ titles and toggles can go in. Desmos also puts opacity and width/size math field
 of each of those sections — same gate, they need `lineOpacity`/`lineWidth`/`pointSize` wired
 through the renderer.
 
-### 3. The keypad's two remaining panels
+### 2. The keypad's two remaining panels
 `functions` and `ABC` render **disabled**, alongside `Audio` which Desmos disables too. Each
 opens a further panel that does not exist yet: `functions` is a popover of trig/stats/list
 commands, `ABC` swaps the whole well for a letters keypad. Both are additive — the key table in
 `Keypad.ts` is plain data and a new panel is a new module, not a rewrite.
 
-### 4. Missing wrench controls
+### 3. Missing wrench controls
 Visible in the user's screenshot, not yet built: **One Quadrant**, **Zoom Square**, the
 display-size segmented control, and the grid-style icon pair that sits inside the Grid block
 between the Grid and Arrows checkboxes (`.dcg-circle-icon-group.dcg-grid-group`, 86×32).
@@ -193,6 +215,10 @@ shipping a control that lies.
 
 ## Landmines
 
+- **The panel width is deliberately not a token.** `--panel-width` is only the value used before
+  the first layout pass; `expressionPanelWidth()` computes the real one and writes it inline on
+  every resize. Do not "tidy" that back into a constant in `tokens.css` — see above for why the
+  constant was wrong twice.
 - **MathQuill's `keystroke('Enter')` silently does nothing.** It never reaches MathQuill's own
   `enter` handler — no throw, no effect, and it looks like it ought to work. The keypad's Enter
   key is therefore a *document* action (`KeyBinding.on === 'document'`), routed through

@@ -8,9 +8,61 @@ import { createToolbar } from './Toolbar.ts';
 import type { Toolbar, ToolbarCallbacks } from './Toolbar.ts';
 import { closeIcon, keypadChevronIcon, keypadIcon, toastMarkIcon } from './icons.ts';
 
-/** Panel drag limits, matching the CSS min-width and max-width. */
-export const PANEL_MIN_WIDTH = 192;
-export const PANEL_MAX_FRACTION = 0.68;
+// ── Expression panel width ───────────────────────────────────────────────────────────────────
+//
+// Desmos's panel is not a fixed width. It is a function of the window, read straight out of its
+// own `getExpListWidth()` in the calculator bundle and confirmed against that function across
+// thirteen viewport sizes:
+//
+//     width = clamp(0.2 * containerWidth + 160, 320, 500)
+//
+// This resolves a contradiction in the project's own notes. `--panel-width: 448px` and a later
+// measurement of 416px were *both* right: 448 is the formula's value at a 1440px-wide window,
+// 416 its value at 1280. Neither is a constant, and hard-coding either is only correct at one
+// window size.
+
+/** Never narrower than this, however the window shrinks or the divider is dragged. */
+export const PANEL_MIN_WIDTH = 320;
+/** Never wider than this when the width is left to the formula. */
+export const PANEL_MAX_WIDTH = 500;
+/** The graph always keeps at least this much room when the divider is dragged. */
+export const PANEL_DRAG_GUTTER = 200;
+/**
+ * Below this container width Desmos stops putting the panel beside the graph and stacks it
+ * underneath instead. Not implemented — noted so the breakpoint is not rediscovered.
+ */
+export const PANEL_NARROW_WIDTH = 450;
+/**
+ * Desmos nudges the panel so the graph comes out exactly square whenever it is already within
+ * this many pixels of square. Measured: at 1280x860 the formula gives 416 but Desmos returns 420.
+ */
+export const PANEL_SQUARE_SNAP = 10;
+
+const clamp = (value: number, low: number, high: number): number =>
+  Math.min(high, Math.max(low, value));
+
+/**
+ * The width Desmos would give the expression panel.
+ *
+ * `userWidth` is the width the divider was last dragged to, if it ever was; Desmos remembers it
+ * and clamps it against the window rather than recomputing the formula.
+ */
+export function expressionPanelWidth(
+  containerWidth: number,
+  containerHeight: number,
+  userWidth?: number,
+): number {
+  if (!containerWidth) return PANEL_MIN_WIDTH;
+
+  const base =
+    userWidth === undefined
+      ? clamp(0.2 * containerWidth + 160, PANEL_MIN_WIDTH, PANEL_MAX_WIDTH)
+      : clamp(userWidth, PANEL_MIN_WIDTH, containerWidth - PANEL_DRAG_GUTTER);
+
+  // The square-graph snap applies to a dragged width too, not just the computed one.
+  const square = containerWidth - containerHeight;
+  return Math.abs(square - base) <= PANEL_SQUARE_SNAP ? square : base;
+}
 
 export interface ShellCallbacks extends ToolbarCallbacks, GraphPaneCallbacks {
   /** Fired when the panel is resized or collapsed, so the canvas can reflow. */
@@ -104,7 +156,18 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
   app.appendChild(body);
   root.appendChild(app);
 
-  // ── Panel resize ─────────────────────────────────────────────────────────────────────────
+  // ── Panel width ──────────────────────────────────────────────────────────────────────────
+  //
+  // The panel tracks the window, as Desmos's does. Once the divider has been dragged that
+  // choice sticks and only gets re-clamped against the window, which is also what Desmos does
+  // with its `userSpecifiedExpListWidth`.
+  let userWidth: number | undefined;
+
+  const applyPanelWidth = (): void => {
+    const width = expressionPanelWidth(body.clientWidth, body.clientHeight, userWidth);
+    panel.style.width = `${width}px`;
+  };
+
   let dragging = false;
   resizer.addEventListener('mousedown', (ev) => {
     dragging = true;
@@ -113,17 +176,22 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
   });
   window.addEventListener('mousemove', (ev) => {
     if (!dragging) return;
-    const width = Math.max(
-      PANEL_MIN_WIDTH,
-      Math.min(Math.round(window.innerWidth * PANEL_MAX_FRACTION), ev.clientX),
-    );
-    panel.style.width = `${width}px`;
+    userWidth = ev.clientX - body.getBoundingClientRect().left;
+    applyPanelWidth();
+    callbacks.onLayoutChange();
   });
   window.addEventListener('mouseup', () => {
     if (!dragging) return;
     dragging = false;
     document.body.style.cursor = '';
   });
+
+  // The observer catches reflows the window never hears about; the window listener is the
+  // belt to its braces, because a ResizeObserver only delivers once the page has painted and
+  // the first pass here can otherwise land before the body has a box at all.
+  new ResizeObserver(applyPanelWidth).observe(body);
+  window.addEventListener('resize', applyPanelWidth);
+  applyPanelWidth();
 
   return { header, toolbar, panel, graph, listHost, body, keypadButton };
 }

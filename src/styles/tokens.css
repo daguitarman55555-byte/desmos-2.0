@@ -13,7 +13,7 @@
  * the values below were each confirmed in a clean profile. Where the frozen prototype and live
  * Desmos disagree, live Desmos now wins, which means reference/desmos-demo.html is no longer
  * the pixel baseline. Retuned so far: --h-topbar, --c-chrome-bg, --fs-math, --row-min-height,
- * --expr-math-min-height, --panel-width;
+ * --expr-math-min-height;
  * plus the settings-panel block below.
  *
  * Theme is light only. The palette lives here as variables so a dark theme is a drop-in later
@@ -105,13 +105,22 @@
   --wordmark-tracking: 0.96px;
 
   /* ── Panel ───────────────────────────────────────────────────────────── */
-  /* Measured on live desmos.com in a clean browser: an explicit 448px, with the graph pane
-   * starting at exactly 448. DesModder reports 467.2 because it widens the panel itself —
-   * that reading is void. The prototype's 466.4 was calibrated against it or against an
-   * older build. */
-  --panel-width: 448px;
-  --panel-min-width: 192px;
-  --panel-max-width: 68%;
+  /* The panel width is NOT a constant and is not set from here — `expressionPanelWidth` in
+   * ui/shell.ts computes it and writes it inline, because Desmos derives it from the window:
+   *
+   *     clamp(0.2 * containerWidth + 160, 320, 500)
+   *
+   * Read out of Desmos's own `getExpListWidth()` and confirmed against that function at
+   * thirteen viewport sizes. This settles a contradiction in the project's own notes: the
+   * 448px once recorded here and the 416px measured later were both correct — 448 is the
+   * formula's value at a 1440px window, 416 its value at 1280.
+   *
+   * The token below is only the value used before the first layout pass. DesModder's 467.2 is
+   * still void: it widens the panel itself. */
+  --panel-width: 416px;
+  --panel-min-width: 320px;
+  /* Desmos always leaves the graph 200px when the divider is dragged. */
+  --panel-max-width: calc(100% - 200px);
   --h-panel-toolbar: 51.2px;
   --panel-toolbar-pad: 0 9.6px 0 6.4px;
   --tool-btn-size: 35.2px;
