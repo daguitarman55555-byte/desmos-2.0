@@ -24,6 +24,8 @@ export interface RowCallbacks {
   /** Long press on the colour disc: open the style tray anchored to it. */
   onStyleMenu(anchor: HTMLElement): void;
   onDelete(): void;
+  /** "add slider:" — define the named variables, in order, as new rows below this one. */
+  onCreateSliders(names: readonly string[]): void;
   onSliderValue(value: number): void;
   onSliderMin(value: number): void;
   onSliderMax(value: number): void;
@@ -38,6 +40,14 @@ export interface RowView {
 
 /** How long the colour disc must be held before the style tray opens, in milliseconds. */
 export const LONG_PRESS_MS = 400;
+
+/**
+ * Most individual variable buttons the "add slider:" prompt will show.
+ *
+ * Desmos's own cap, and the reason the "all" button exists: past four names the row would wrap
+ * badly, so the rest are only reachable through "all".
+ */
+export const MAX_SLIDER_BUTTONS = 4;
 
 /** Selectors that handle their own mousedown and must not steal focus to the math field. */
 const SELF_HANDLED = '.sl-track, .bf, .expr-del, .idx-icon, .idx-icon2';
@@ -69,7 +79,57 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
     onMax: callbacks.onSliderMax,
     onStep: callbacks.onSliderStep,
   });
-  body.append(slider.track, slider.bounds);
+  // "add slider: a b all", under the expression. Rebuilt only when the set of missing names
+  // changes, so the buttons are not replaced under the cursor on every keystroke.
+  const prompt = document.createElement('div');
+  prompt.className = 'create-sliders';
+  prompt.hidden = true;
+  let promptNames = '';
+
+  const renderPrompt = (names: readonly string[]): void => {
+    const key = names.join(',');
+    if (key === promptNames) return;
+    promptNames = key;
+
+    prompt.hidden = names.length === 0;
+    prompt.innerHTML = '';
+    if (!names.length) return;
+
+    const msg = document.createElement('span');
+    msg.className = 'cs-msg';
+    msg.textContent = 'add slider:';
+    prompt.appendChild(msg);
+
+    const buttons = document.createElement('span');
+    buttons.className = 'cs-btns';
+
+    // A single missing variable gets the blue button itself; with more than one the individual
+    // buttons go grey and "all" takes the blue. Desmos's rule, and it reads as "the obvious
+    // thing to click" either way.
+    const single = names.length === 1;
+    const add = (label: string, latex: string, blue: boolean, all: boolean): void => {
+      const holder = document.createElement('div');
+      holder.className = all ? 'cs-btn-holder cs-all' : 'cs-btn-holder';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = blue ? 'cs-btn cs-btn-blue' : 'cs-btn cs-btn-grey';
+      b.textContent = label;
+      b.addEventListener('mousedown', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        callbacks.onCreateSliders(latex === '' ? names : [latex]);
+      });
+      holder.appendChild(b);
+      buttons.appendChild(holder);
+    };
+
+    for (const n of names.slice(0, MAX_SLIDER_BUTTONS)) add(n, n, single, false);
+    if (!single) add('all', '', true, true);
+
+    prompt.appendChild(buttons);
+  };
+
+  body.append(prompt, slider.track, slider.bounds);
   element.appendChild(body);
 
   const remove = document.createElement('button');
@@ -171,6 +231,11 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
           ? pointIcon(colour, expression.visible, expression.pointStyle)
           : curveIcon(colour, expression.visible, expression.lineStyle);
       }
+
+      // Desmos offers sliders on any row it understands, error rows included only when the
+      // error *is* the missing name — our analyser reports nothing for a broken row, so this
+      // is simply "whatever it found".
+      renderPrompt(analysis?.undefinedVariables ?? []);
 
       slider.update({
         visible: hasSlider,

@@ -38,6 +38,9 @@ import { createShell } from './ui/shell.ts';
 /** Movement in pixels below which a press counts as a click rather than a drag. */
 const CLICK_SLOP = 4;
 
+/** The value a slider created from the "add slider:" prompt starts at, as in Desmos. */
+const DEFAULT_SLIDER_VALUE = 1;
+
 async function boot(): Promise<void> {
   await initMathQuill();
 
@@ -368,6 +371,22 @@ async function boot(): Promise<void> {
       onDelete() {
         store.remove(expression);
         renderList();
+        draw();
+        history.push(snapshotOf(store.expressions));
+      },
+      onCreateSliders(names) {
+        // One row per name, in the order they appear in the expression, immediately below it.
+        let after: Expression = expression;
+        for (const name of names) {
+          const latex = `${name}=${DEFAULT_SLIDER_VALUE}`;
+          after = store.insertAfter(after, latex);
+        }
+        store.markDirty();
+        refresh();
+        // The rows exist now, so push the latex into each field without re-firing edit handlers.
+        for (const e of store.expressions) {
+          if (e.latex) list.rowFor(e.id)?.math.setLatexQuietly(e.latex);
+        }
         draw();
         history.push(snapshotOf(store.expressions));
       },

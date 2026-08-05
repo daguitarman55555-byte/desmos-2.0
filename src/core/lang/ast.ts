@@ -96,6 +96,32 @@ export function usesVariable(node: Node, name: string): boolean {
   }
 }
 
+/**
+ * Every *variable* in the tree, in first-appearance order.
+ *
+ * Deliberately not `freeVariables`, which also collects the names of called functions: those
+ * two uses want different answers. A missing `f` in `f(2)` is an undefined function and gets a
+ * warning triangle, while a missing `a` in `2a` is a slider waiting to be offered.
+ *
+ * Constants never appear here — `pi`, `tau` and `e` are folded to numbers during parsing.
+ */
+export function usedVariables(node: Node, into: Set<string> = new Set()): Set<string> {
+  switch (node.type) {
+    case 'number': break;
+    case 'variable': into.add(node.name); break;
+    case 'negate': usedVariables(node.operand, into); break;
+    case 'binary': usedVariables(node.left, into); usedVariables(node.right, into); break;
+    case 'call':
+    case 'userCall': for (const a of node.args) usedVariables(a, into); break;
+    case 'tuple': for (const a of node.items) usedVariables(a, into); break;
+    default: {
+      const never: never = node;
+      return never;
+    }
+  }
+  return into;
+}
+
 /** Every free variable in the tree, in first-appearance order. Used by `eval/deps.ts`. */
 export function freeVariables(node: Node, into: Set<string> = new Set()): Set<string> {
   switch (node.type) {

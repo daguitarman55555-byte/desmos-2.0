@@ -180,6 +180,39 @@ panel width is not even in there, because it is computed per window.
 
 ---
 
+## Slider animation — measured, not yet built
+
+The "add slider:" prompt is built (`undefinedVariables` on `Analysis` → the prompt in
+`ExpressionRow` → `onCreateSliders` in `main.ts`). **Animating a slider is not.** The play glyph
+already renders on every variable-definition row and does nothing; `swapIcon` beside it is
+Desmos's loop-mode control and is likewise inert. Everything needed was read out of Desmos's
+bundle:
+
+```
+animationPeriod = 4000 ms          // a full min→max sweep
+loopMode        = LOOP_FORWARD_REVERSE   // the default; bounces at both ends
+playDirection   = +1
+```
+
+Its per-frame step, from `yB(o, e)` in the bundle:
+
+```
+dt      = min(now - lastTick, period / 10)     // a long frame gap is clamped, not applied
+delta   = (max - min) * dt / period
+target += delta * playDirection
+target  = clamp(target, min - halfStep, max + halfStep)   // halfStep = step ? step/2 : 0
+value   = quantise(target, step)
+```
+
+Direction, for `LOOP_FORWARD_REVERSE`: `if (target >= max) playDirection = -1; else if
+(target <= min) playDirection = +1`. The other three modes are `LOOP_FORWARD` (wraps
+`max + halfStep` → `min - halfStep`), `PLAY_ONCE`, and `PLAY_INDEFINITELY` (no upper bound;
+steps by `dt / (period / 4)`). Their icons are `dcg-icon-arrow-two-way`, `-one-way`, `-once`.
+
+Sliders default to `min: -10, max: 10, step: ""` — which `document.ts` already matches.
+
+---
+
 ## Next up, in the order I would take them
 
 ### 1. The style tray's opacity and size fields
@@ -224,6 +257,11 @@ Do not build them and do not re-add them to this list.
 
 ## Landmines
 
+- **`a\sin(x)` is silently read as `arcsin(x)`.** `latexToSource` flattens `\sin` to `sin`, so
+  the coefficient and the function name run together into a string the tokenizer longest-matches
+  as a builtin — and the `a` disappears from the expression entirely. Same for `a\cos` and
+  `a\tan`. Pinned in `tests/lang/undefined-variables.test.ts` as a known bug so the loss is
+  visible; fixing it means teaching `latexToSource` to keep function-name boundaries.
 - **A blank document showing one row is correct.** An earlier note here claimed Desmos shows
   rows 1 *and* 2 on a blank document and that `ensureTrailingBlank()` needed fixing. It does not:
   live Desmos renders exactly one row when empty, and `expressions + 1` once anything is typed,

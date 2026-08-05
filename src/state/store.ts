@@ -2,7 +2,7 @@
 
 import { COLOURS, DEFAULT_SETTINGS, createExpression, isBlank } from './document.ts';
 import type { Expression, GraphSettings } from './document.ts';
-import { GRAPHED_KINDS, analyze } from '../core/lang/analyze.ts';
+import { GRAPHED_KINDS, analyze, settleUndefined } from '../core/lang/analyze.ts';
 import type { Analysis } from '../core/lang/analyze.ts';
 import { createScope } from '../core/lang/scope.ts';
 
@@ -76,6 +76,14 @@ export class Store {
       if (!e.colour && analysis.kind !== null && GRAPHED_KINDS.has(analysis.kind) && !analysis.error) {
         e.colour = COLOURS[this.colourIndex++ % COLOURS.length] as string;
       }
+    }
+
+    // Second pass, against the finished scope. A row referring to a variable defined *below* it
+    // saw an empty scope first time round and would otherwise offer a slider for a name that
+    // already exists.
+    for (const e of this.expressions) {
+      const analysis = this.analyses.get(e.id);
+      if (analysis) this.analyses.set(e.id, settleUndefined(analysis, this.scope));
     }
   }
 

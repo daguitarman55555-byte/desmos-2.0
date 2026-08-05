@@ -6,7 +6,7 @@
 // all decided by the order in which the branches are tried. It is reproduced from the prototype
 // branch for branch.
 
-import { usesVariable } from './ast.ts';
+import { usedVariables, usesVariable } from './ast.ts';
 import {
   FUNCTION_DEFINITION,
   NUMERIC_LITERAL,
@@ -47,12 +47,20 @@ export interface Analysis {
   readonly sliderLabel: string;
   /** A value the row should adopt, or null to keep whatever it had. */
   readonly value: number | null;
+  /**
+   * Variables the expression uses that nothing defines, in first-appearance order.
+   *
+   * Drives the "add slider:" prompt. Empty for an erroring or unclassifiable row: Desmos only
+   * offers sliders once it understands the expression well enough to know what is missing.
+   */
+  readonly undefinedVariables: readonly string[];
 }
 
 const EMPTY: Analysis = {
   kind: null, error: false, fn: null,
   variableName: null, functionName: null,
   sliderKind: null, sliderLabel: '', value: null,
+  undefinedVariables: [],
 };
 
 const failed: Analysis = { ...EMPTY, error: true };
@@ -68,6 +76,75 @@ const failed: Analysis = { ...EMPTY, error: true };
  * Every failure path is a caught exception producing `error: true`. Nothing here throws.
  */
 export function analyze(latex: string, scope: Scope): Analysis {
+  const base = classify(latex, scope);
+  return { ...base, undefinedVariables: undefinedIn(latex, scope, base) };
+}
+
+/**
+ * Drop names that a *later* row turned out to define.
+ *
+ * Rows are analysed top to bottom, so a row referring to a variable defined below it sees an
+ * empty scope and reports the name as missing. Every other part of the evaluator tolerates that
+ * — compiled closures resolve names at call time, so forward references already work — but the
+ * "add slider:" prompt would flash up offering a variable that does exist.
+ *
+ * The store calls this once the whole pass is done and the scope is complete.
+ */
+export function settleUndefined(analysis: Analysis, scope: Scope): Analysis {
+  if (analysis.undefinedVariables.length === 0) return analysis;
+  const remaining = analysis.undefinedVariables.filter(
+    (n) => !scope.vars.has(n) && !scope.funcs.has(n),
+  );
+  return remaining.length === analysis.undefinedVariables.length
+    ? analysis
+    : { ...analysis, undefinedVariables: remaining };
+}
+
+/**
+ * The variables an expression uses that nothing has defined.
+ *
+ * Computed after classification rather than during it, because what counts as *bound* depends
+ * on what the row turned out to be: a function definition binds its own parameters, and a
+ * variable definition binds the name on its left. Both are known only once `classify` has run.
+ *
+ * `x` and `y` are always bound — they are the plotting coordinates, compiled to direct frame
+ * reads, and offering a slider for them would be nonsense. Names in `scope.funcs` are excluded
+ * too: an undefined `f` in `f(2)` is a missing function, which is a warning triangle, not a
+ * slider. Constants never reach here at all, since parsing folds `pi`, `tau` and `e` to numbers.
+ */
+function undefinedIn(latex: string, scope: Scope, analysis: Analysis): readonly string[] {
+  if (analysis.error || analysis.kind === null) return [];
+
+  const src = latexToSource(latex).trim();
+  if (!src) return [];
+
+  const bound = new Set<string>(['x', 'y']);
+  if (analysis.variableName) bound.add(analysis.variableName);
+  if (analysis.kind === 'func' && analysis.functionName) {
+    for (const p of scope.funcs.get(analysis.functionName)?.params ?? []) bound.add(p);
+  }
+
+  try {
+    const names = new Set<string>();
+    const sides = splitEquation(src);
+    if (sides) {
+      usedVariables(parseSource(sides.lhs), names);
+      usedVariables(parseSource(sides.rhs), names);
+    } else {
+      usedVariables(parseSource(src), names);
+    }
+
+    return [...names].filter(
+      (n) => !bound.has(n) && !scope.vars.has(n) && !scope.funcs.has(n),
+    );
+  } catch {
+    // A side that will not parse on its own tells us nothing about missing variables. The row
+    // has already been classified, so stay quiet rather than guess.
+    return [];
+  }
+}
+
+function classify(latex: string, scope: Scope): Analysis {
   const src = latexToSource(latex).trim();
   if (!src) return EMPTY;
 

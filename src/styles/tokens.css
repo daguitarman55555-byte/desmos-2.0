@@ -147,6 +147,25 @@
   --expr-del-top: 19px;
   --mq-root-pad: 1.6px 0;
 
+  /* ── "add slider:" prompt ─────────────────────────────────────────────
+   * Desmos's `.dcg-create-sliders`, measured off its stylesheet. The buttons are its standard
+   * blue and light-grey faces at a smaller size, set in Times italic because they are variable
+   * names — "all" is the one that stays upright. */
+  --cs-margin-top: -2px;
+  --cs-msg-size: 80%;
+  --cs-msg-colour: rgba(0, 0, 0, 0.6);
+  --cs-msg-gap: 5px;
+  --cs-btn-min-width: 35px;
+  --cs-btn-size: 85%;
+  --cs-btn-pad: 0 4px;
+  --cs-btn-line: 24px;
+  --cs-btn-gap: 3px;
+  --cs-btn-margin-y: 1.5px;
+  --cs-grey-bg: linear-gradient(#f6f6f6, #eff2f3);
+  --cs-grey-border: rgba(206, 206, 206, 0.8);
+  --cs-emboss: inset 0 1px rgba(255, 255, 255, 0.25), inset 0 -1px rgba(0, 0, 0, 0.02);
+  --cs-blue-emboss: inset 0 1px rgba(255, 255, 255, 0.1), inset 0 -1px rgba(0, 0, 0, 0.04);
+
   /* ── Slider ──────────────────────────────────────────────────────────── */
   --slider-gap: 8px;
   --slider-margin-top: 8px;

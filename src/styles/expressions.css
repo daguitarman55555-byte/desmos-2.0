@@ -128,3 +128,60 @@
 .expr-math .mq-editable-field { font-size: var(--fs-math); width: 100%; }
 .expr-math .mq-root-block { padding: var(--mq-root-pad); }
 .mq-editable-field .mq-cursor { border-left: var(--hairline) solid var(--c-text); }
+
+/* ===================== "add slider:" PROMPT =====================
+ * Shown under an expression that uses variables nothing defines. Geometry measured off
+ * Desmos's `.dcg-create-sliders` stylesheet; see the --cs-* block in tokens.css.
+ *
+ * One missing variable puts the blue face on that variable's own button. More than one turns
+ * them grey and gives the blue to "all", so there is always exactly one obvious thing to click.
+ */
+.create-sliders {
+  display: flex; flex-wrap: wrap; align-items: center;
+  margin-top: var(--cs-margin-top);
+}
+.create-sliders[hidden] { display: none; }
+
+.cs-msg {
+  margin-right: var(--cs-msg-gap);
+  font-size: var(--cs-msg-size);
+  color: var(--cs-msg-colour);
+}
+
+.cs-btns { display: flex; flex-wrap: wrap; align-items: center; }
+.cs-btn-holder {
+  display: inline-block; position: relative;
+  margin-right: var(--cs-btn-gap);
+  margin-top: var(--cs-btn-margin-y); margin-bottom: var(--cs-btn-margin-y);
+}
+
+.cs-btn {
+  min-width: var(--cs-btn-min-width);
+  padding: var(--cs-btn-pad);
+  font-family: var(--font-math);
+  font-size: var(--cs-btn-size);
+  font-style: italic;
+  line-height: var(--cs-btn-line);
+  border-radius: var(--seg-radius);
+  border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap; text-align: center;
+}
+/* "all" is a word, not a variable, so it does not lean. */
+.cs-all .cs-btn { font-style: normal; }
+
+.cs-btn-grey {
+  background: var(--cs-grey-bg);
+  border-color: var(--cs-grey-border);
+  color: var(--c-text);
+  box-shadow: var(--cs-emboss);
+}
+.cs-btn-grey:hover { background: var(--c-hover); }
+
+.cs-btn-blue {
+  background: var(--c-blue);
+  color: var(--c-chrome-text);
+  box-shadow: var(--cs-blue-emboss);
+}
+.cs-btn-blue:hover { background: var(--c-blue-hover); }
+.cs-btn:active { box-shadow: none; }
+.cs-btn:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 2px; }
