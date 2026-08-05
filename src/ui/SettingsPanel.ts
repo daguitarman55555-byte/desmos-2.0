@@ -7,10 +7,11 @@
 // Deliberately NOT reproduced, because each needs an engine feature that does not exist yet
 // rather than a control that does nothing:
 //
-//   Display size / Reverse contrast / Braille Mode — accessibility and theming. The palette
-//     already lives in tokens.css, so a theme is a drop-in; these wait for it.
+//   Display size — theming. The palette already lives in tokens.css, so it is a drop-in.
 //   Complex Mode — needs core/numeric/complex.ts wired through the evaluator (UPGRADES P1).
 //   More Options — its contents are the above.
+//
+// Reverse contrast and braille mode are out of scope for this project by decision, not deferred.
 //   The grid-style icon row inside the Grid block — belongs with the expression colour and
 //     line-style icons, which are a separate piece of work.
 //

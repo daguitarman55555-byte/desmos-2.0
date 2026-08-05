@@ -6,7 +6,7 @@ import { createHeader } from './Header.ts';
 import type { Header } from './Header.ts';
 import { createToolbar } from './Toolbar.ts';
 import type { Toolbar, ToolbarCallbacks } from './Toolbar.ts';
-import { closeIcon, keypadChevronIcon, keypadIcon, toastMarkIcon } from './icons.ts';
+import { closeIcon, collapseIcon, keypadChevronIcon, keypadIcon, toastMarkIcon } from './icons.ts';
 
 // ── Expression panel width ───────────────────────────────────────────────────────────────────
 //
@@ -97,15 +97,19 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
   const panel = document.createElement('div');
   panel.id = 'panel';
 
+  // Collapsing the panel is a state, not just a class, because the panel's width is written
+  // inline — an inline width beats any stylesheet rule, so `.collapsed { width: 0 }` alone is
+  // silently ignored. `applyPanelWidth` below is the single place that resolves the two.
+  let collapsed = false;
+  let setCollapsed = (next: boolean): void => {
+    collapsed = next;
+  };
+
   const toolbar = createToolbar({
     onAdd: callbacks.onAdd,
     onUndo: callbacks.onUndo,
     onRedo: callbacks.onRedo,
-    onCollapse: () => {
-      panel.classList.toggle('collapsed');
-      // The canvas tracks its own box, so one frame later the observer picks up the new size.
-      requestAnimationFrame(callbacks.onLayoutChange);
-    },
+    onCollapse: () => setCollapsed(true),
   });
   panel.appendChild(toolbar.element);
 
@@ -126,7 +130,9 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
     ev.preventDefault();
     callbacks.onKeypad();
   });
-  panel.appendChild(keypadButton);
+  // On the body rather than the panel, so collapsing the list does not take the keypad button
+  // with it. Desmos's sits over the whole calculator for the same reason.
+  body.appendChild(keypadButton);
 
   const toast = document.createElement('div');
   toast.id = 'login-toast';
@@ -153,6 +159,18 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
   });
   body.appendChild(graph.element);
 
+  // The way back. The collapse button lives inside the panel, so it goes with it — Desmos has
+  // the same problem and solves it the same way, with a tab over the top-left of the graph.
+  const showList = document.createElement('button');
+  showList.id = 'show-list-tab';
+  showList.type = 'button';
+  showList.title = 'Show Expressions List';
+  showList.setAttribute('aria-label', 'Show Expressions List');
+  showList.innerHTML = collapseIcon;
+  showList.hidden = true;
+  showList.addEventListener('click', () => setCollapsed(false));
+  body.appendChild(showList);
+
   app.appendChild(body);
   root.appendChild(app);
 
@@ -164,8 +182,20 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
   let userWidth: number | undefined;
 
   const applyPanelWidth = (): void => {
-    const width = expressionPanelWidth(body.clientWidth, body.clientHeight, userWidth);
+    // Collapsed wins. The inline width is what the stylesheet cannot override, so zeroing it
+    // here is what actually closes the panel.
+    const width = collapsed ? 0 : expressionPanelWidth(body.clientWidth, body.clientHeight, userWidth);
     panel.style.width = `${width}px`;
+  };
+
+  setCollapsed = (next: boolean): void => {
+    if (next === collapsed) return;
+    collapsed = next;
+    panel.classList.toggle('collapsed', next);
+    showList.hidden = !next;
+    applyPanelWidth();
+    // The canvas tracks its own box, so one frame later the observer picks up the new size.
+    requestAnimationFrame(callbacks.onLayoutChange);
   };
 
   let dragging = false;

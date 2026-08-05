@@ -214,9 +214,11 @@ not guesses:
   survives. That is why `Viewport` now tracks `lastChangedAxis`.
 
 ### 4. Deliberately deferred, each needing an engine feature first
-Display size, reverse contrast, braille mode (theming/accessibility); **Complex Mode** (needs
-`core/numeric/complex.ts` wired through the evaluator); More Options. Leaving a gap is better than
-shipping a control that lies.
+Display size (theming); **Complex Mode** (needs `core/numeric/complex.ts` wired through the
+evaluator); More Options. Leaving a gap is better than shipping a control that lies.
+
+**Reverse contrast and braille mode are out of scope** — the user's decision, not a deferral.
+Do not build them and do not re-add them to this list.
 
 ---
 

@@ -169,6 +169,24 @@ body {
 /* Stood down while the keypad is open — the keypad carries its own minimize tab. */
 #keypad-btn.hidden { display: none; }
 
+/* The way back from a collapsed list. Sits over the top-left of the graph, mirroring the
+ * collapse button it replaces — same chevrons, flipped to point the other way. */
+#show-list-tab {
+  position: absolute; left: var(--gtools-top); top: var(--gtools-top);
+  width: var(--gbtn-size); height: var(--gbtn-size);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; cursor: pointer;
+  background: var(--c-surface);
+  border: var(--hairline) solid var(--c-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-keypad);
+  color: var(--c-icon);
+  z-index: 6;
+}
+#show-list-tab svg { transform: scaleX(-1); }
+#show-list-tab:hover { background: var(--c-hover); }
+#show-list-tab[hidden] { display: none; }
+
 #login-toast {
   position: absolute; left: 50%; transform: translateX(-50%);
   bottom: var(--toast-bottom);
