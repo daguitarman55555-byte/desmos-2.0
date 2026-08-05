@@ -150,6 +150,12 @@ export class Store {
     this.markDirty();
   }
 
+  /** Apply a style change from the tray. */
+  setStyle(e: Expression, patch: Partial<Pick<Expression, 'colour' | 'lineStyle' | 'pointStyle' | 'lineWidth' | 'pointSize'>>): void {
+    Object.assign(e, patch);
+    this.markDirty();
+  }
+
   reset(expressions: Expression[]): void {
     this.expressions = expressions;
     this.analyses.clear();

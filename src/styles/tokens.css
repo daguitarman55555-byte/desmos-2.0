@@ -222,6 +222,13 @@
   /* The Step field alone; Desmos budgets 68.8px for the label and field together. */
   --settings-step-w: 36px;
 
+  /* ── Style tray (long-press the expression disc) ──────────────────────
+   * The palette and styles are measured; this tray's own spacing is not — see StyleMenu.ts. */
+  --sty-pad: 8px;
+  --sty-gap: 6px;
+  --sty-swatch: 29px;
+  --sty-line-w: 40px;
+
   /* ── Graph ───────────────────────────────────────────────────────────── */
   /* Measured: the pillbox sits 5px from the top and right of the graph pane, and each
    * button is 37px (Desmos's interior buttons are 35 inside a 1px-bordered 37px shell). */

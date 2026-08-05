@@ -30,6 +30,7 @@ import type { RowCallbacks } from './ui/ExpressionRow.ts';
 import { LEFT, initMathQuill } from './ui/MathField.ts';
 import { labelItems } from './ui/PointLabel.ts';
 import { createSettingsPanel } from './ui/SettingsPanel.ts';
+import { createStyleMenu } from './ui/StyleMenu.ts';
 import { createShell } from './ui/shell.ts';
 
 /** Movement in pixels below which a press counts as a click rather than a drag. */
@@ -94,6 +95,23 @@ async function boot(): Promise<void> {
     if (!settingsPanel.isOpen) return;
     settingsPanel.update({ ...store.settings }, view.boundsObject());
   };
+
+  const styleMenu = createStyleMenu({
+    onColour: (colour) => applyStyle({ colour }),
+    onLineStyle: (lineStyle) => applyStyle({ lineStyle }),
+    onPointStyle: (pointStyle) => applyStyle({ pointStyle }),
+  });
+  shell.panel.appendChild(styleMenu.element);
+
+  function applyStyle(patch: Parameters<Store['setStyle']>[1]): void {
+    const target = store.expressions.find((e) => e.id === styleMenu.targetId);
+    if (!target) return;
+    store.setStyle(target, patch);
+    renderList();
+    styleMenu.update(target);
+    draw();
+    history.push(snapshotOf(store.expressions));
+  }
 
   const renderer = new Renderer(shell.graph.context, view, store.scope);
   shell.graph.showPerf(showPerf);
@@ -299,6 +317,12 @@ async function boot(): Promise<void> {
         renderList();
         draw();
       },
+      onStyleMenu(anchor) {
+        const analysis = store.analyses.get(expression.id);
+        if (!analysis || analysis.error || analysis.kind === null) return;
+        if (analysis.kind === 'slider') return;      // nothing to style
+        styleMenu.openFor(expression, analysis.kind === 'point', anchor);
+      },
       onDelete() {
         store.remove(expression);
         renderList();
@@ -495,18 +519,21 @@ async function boot(): Promise<void> {
     draw();
   });
 
-  // Clicking away closes the panel, but clicking inside it must not.
+  // Clicking away closes the popovers, but clicking inside one must not.
   document.addEventListener('mousedown', (ev) => {
-    if (!settingsPanel.isOpen) return;
     const target = ev.target as HTMLElement;
-    if (settingsPanel.element.contains(target) || target.closest('#wrench-btn')) return;
-    settingsPanel.close();
+    if (settingsPanel.isOpen && !settingsPanel.element.contains(target) && !target.closest('#wrench-btn')) {
+      settingsPanel.close();
+    }
+    if (styleMenu.isOpen && !styleMenu.element.contains(target) && !target.closest('.idx-icon')) {
+      styleMenu.close();
+    }
   });
 
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && settingsPanel.isOpen) {
-      settingsPanel.close();
-      return;
+    if (ev.key === 'Escape') {
+      if (styleMenu.isOpen) { styleMenu.close(); return; }
+      if (settingsPanel.isOpen) { settingsPanel.close(); return; }
     }
     if (!(ev.ctrlKey || ev.metaKey)) return;
     const key = ev.key.toLowerCase();

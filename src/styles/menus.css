@@ -182,3 +182,37 @@
 
 .set-range .set-bound.set-mathfield { flex: 1 1 0; min-width: 0; justify-content: center; }
 .set-stepfield { width: var(--settings-step-w); flex: 0 0 var(--settings-step-w); }
+
+/* ===================== STYLE TRAY ===================== */
+
+.sty-menu {
+  padding: var(--sty-pad);
+  display: flex; flex-direction: column; gap: var(--sty-gap);
+  width: max-content;
+}
+
+.sty-row { display: flex; gap: var(--sty-gap); align-items: center; }
+.sty-row[hidden] { display: none; }
+.sty-points { flex-wrap: wrap; max-width: calc(4 * (var(--sty-swatch) + var(--sty-gap))); }
+
+.sty-swatch {
+  width: var(--sty-swatch); height: var(--sty-swatch);
+  flex: 0 0 auto;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.sty-swatch:hover { background: var(--c-hover); }
+.sty-swatch svg { display: block; width: 100%; height: 100%; }
+
+/* Line-style previews are wider than they are tall, so they get a pill rather than a disc. */
+.sty-line {
+  width: var(--sty-line-w);
+  border-radius: var(--radius-sm);
+}
+.sty-line.selected,
+.sty-points .sty-swatch.selected {
+  background: var(--c-hover);
+  outline: 2px solid var(--c-blue);
+  outline-offset: -2px;
+}

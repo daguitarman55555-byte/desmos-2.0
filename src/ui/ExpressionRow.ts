@@ -21,6 +21,8 @@ export interface RowCallbacks {
   onDeleteOutOfLeft(): void;
   onFocusRequest(): void;
   onToggleVisible(): void;
+  /** Long press on the colour disc: open the style tray anchored to it. */
+  onStyleMenu(anchor: HTMLElement): void;
   onDelete(): void;
   onSliderValue(value: number): void;
   onSliderMin(value: number): void;
@@ -33,6 +35,9 @@ export interface RowView {
   readonly math: MathFieldHandle;
   update(index: number, expression: Expression, analysis: Analysis | undefined, focused: boolean): void;
 }
+
+/** How long the colour disc must be held before the style tray opens, in milliseconds. */
+export const LONG_PRESS_MS = 400;
 
 /** Selectors that handle their own mousedown and must not steal focus to the math field. */
 const SELF_HANDLED = '.sl-track, .bf, .expr-del, .idx-icon, .idx-icon2';
@@ -84,10 +89,38 @@ export function createRow(callbacks: RowCallbacks, leftDirection: number): RowVi
 
   math.element.addEventListener('focusin', () => callbacks.onFocusRequest());
 
+  // Desmos puts two gestures on the disc: a click toggles visibility, a long press opens the
+  // style tray. They share one element, so they are told apart by how long the button is held.
+  let pressTimer: ReturnType<typeof setTimeout> | null = null;
+  let openedTray = false;
+
+  const cancelPress = (): void => {
+    if (pressTimer !== null) clearTimeout(pressTimer);
+    pressTimer = null;
+  };
+
   icon.addEventListener('mousedown', (ev) => {
     ev.preventDefault();
     ev.stopPropagation();
-    callbacks.onToggleVisible();
+    openedTray = false;
+    pressTimer = setTimeout(() => {
+      pressTimer = null;
+      openedTray = true;
+      callbacks.onStyleMenu(icon);
+    }, LONG_PRESS_MS);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (pressTimer !== null) {
+      // Released before the tray opened, so this was a plain click.
+      cancelPress();
+      callbacks.onToggleVisible();
+    }
+    openedTray = false;
+  });
+
+  icon.addEventListener('mouseleave', () => {
+    if (!openedTray) cancelPress();
   });
 
   remove.addEventListener('mousedown', (ev) => {
