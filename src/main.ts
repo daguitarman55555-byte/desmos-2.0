@@ -27,7 +27,9 @@ import { Store } from './state/store.ts';
 import type { Expression } from './state/document.ts';
 import { createExpressionList } from './ui/ExpressionList.ts';
 import type { RowCallbacks } from './ui/ExpressionRow.ts';
+import { createKeypad } from './ui/Keypad.ts';
 import { LEFT, initMathQuill } from './ui/MathField.ts';
+import type { MathField } from './ui/MathField.ts';
 import { labelItems } from './ui/PointLabel.ts';
 import { createSettingsPanel } from './ui/SettingsPanel.ts';
 import { createStyleMenu } from './ui/StyleMenu.ts';
@@ -65,6 +67,7 @@ async function boot(): Promise<void> {
     onZoomOut: () => { view.zoomBy(1 / ZOOM_STEP); draw(); },
     onHome: () => { view.resetToDefault(); draw(); },
     onWrench: () => { settingsPanel.toggle(); syncSettingsPanel(); },
+    onKeypad: () => keypad.toggle(),
   });
 
   const settingsPanel = createSettingsPanel({
@@ -118,6 +121,30 @@ async function boot(): Promise<void> {
 
   const list = createExpressionList({ rowCallbacks: makeRowCallbacks }, LEFT());
   shell.listHost.replaceWith(list.element);
+
+  // The keypad types into whichever row holds the caret. It overlays the body rather than
+  // displacing it, so opening it costs no layout — but the show button has to get out of the
+  // way, because the keypad brings its own minimize tab.
+  const keypad = createKeypad({
+    focusedField: (): MathField | null => {
+      if (selection.focusedId === null) return null;
+      return list.rowFor(selection.focusedId)?.math.field ?? null;
+    },
+    // Enter closes the row and opens the next, exactly as the physical key does. It cannot go
+    // through MathQuill: its `keystroke('Enter')` never reaches its own enter handler.
+    onDocumentAction: (action) => {
+      if (action !== 'enter') return;
+      const focused = store.expressions.find((e) => e.id === selection.focusedId);
+      if (!focused) return;
+      const created = store.insertAfter(focused);
+      renderList();
+      focusRow(created, false);
+    },
+    onToggle: (open) => {
+      shell.keypadButton.classList.toggle('hidden', open);
+    },
+  });
+  shell.body.appendChild(keypad.el);
 
   // ── Rendering ──────────────────────────────────────────────────────────────────────────────
 

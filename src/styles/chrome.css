@@ -103,7 +103,8 @@ body {
 #signup-btn:hover { background: var(--c-blue-hover); }
 
 /* ===================== BODY ===================== */
-#body { flex: 1 1 auto; display: flex; min-height: 0; }
+/* Positioned so the keypad can overlay the panel and the graph together. */
+#body { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }
 
 /* ===================== PANEL ===================== */
 #panel {
@@ -165,6 +166,8 @@ body {
   cursor: pointer; box-shadow: var(--shadow-keypad); z-index: 6;
 }
 #keypad-btn:hover { background: #f6f6f6; }
+/* Stood down while the keypad is open — the keypad carries its own minimize tab. */
+#keypad-btn.hidden { display: none; }
 
 #login-toast {
   position: absolute; left: 50%; transform: translateX(-50%);

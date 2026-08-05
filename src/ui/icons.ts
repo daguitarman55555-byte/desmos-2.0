@@ -69,6 +69,41 @@ export const keypadIcon = `
 export const keypadChevronIcon = `
 <svg width="11.2" height="9" viewBox="0 0 14 9" fill="none" stroke="#3f3f3f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 6.9L7 1.9l5.4 5"/></svg>`;
 
+// ── Keypad glyphs ────────────────────────────────────────────────────────────────────────────
+//
+// Four of Desmos's keys carry an icon rather than a maths label: the two caret arrows, the
+// backspace and the enter. Drawn at the weights its icon font renders them.
+
+export const arrowLeftIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5L8 12l6.5 6.5"/></svg>`;
+
+export const arrowRightIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5.5L16 12l-6.5 6.5"/></svg>`;
+
+/** Backspace: the tag-shaped key with a cross in it. */
+export const backspaceIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M8.4 5.2h11.1a1.6 1.6 0 0 1 1.6 1.6v10.4a1.6 1.6 0 0 1-1.6 1.6H8.4L2.5 12z"/>
+  <path d="M15.9 9.4l-4.8 5.2M11.1 9.4l4.8 5.2"/>
+</svg>`;
+
+/** Enter: the hooked arrow returning to the left. */
+export const enterIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M20 5.5v6.9a2 2 0 0 1-2 2H4.6"/><path d="M8.9 10.2L4.4 14.4l4.5 4.2"/>
+</svg>`;
+
+export const volumeIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M11.5 4.5L6.6 8.6H3v6.8h3.6l4.9 4.1z"/><path d="M15.4 9a4.2 4.2 0 0 1 0 6"/>
+</svg>`;
+
+/** The radical the √ key shows, matching MathQuill's own prefix shape. */
+export const radicalIcon = `
+<svg viewBox="0 0 32 30" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M1 16.5l4-3.3 3.4 12.2L18 4h13"/>
+</svg>`;
+
 export const toastMarkIcon = `
 <svg width="38.4" height="38" viewBox="0 0 48 38" fill="none" style="flex:0 0 48px">
   <path d="M7 5c0 16.5 7.4 27 17 27s17-10.5 17-27" stroke="#232323" stroke-width="5.6" stroke-linecap="round"/>
@@ -147,10 +182,8 @@ export function curveIcon(colour: string, visible: boolean, lineStyle: LineStyle
 }
 
 /** The marker glyphs, drawn white-on-colour inside the disc. Sized to Desmos's 19.25px glyph. */
-function markerPath(style: PointStyle, ink: string): string {
+function markerPath(style: PointStyle, ink: string, r = 6.2, w = 2.4): string {
   const c = 15;
-  const r = 6.2;
-  const w = 2.4;
   const poly = (n: number, radius: number, rotate = -Math.PI / 2): string =>
     Array.from({ length: n }, (_, i) => {
       const a = rotate + (i * 2 * Math.PI) / n;
@@ -200,19 +233,33 @@ export function pointIcon(colour: string, visible: boolean, pointStyle: PointSty
   </svg>`;
 }
 
-/** A bare swatch for the style tray: the colour with no glyph. */
-export const colourSwatch = (colour: string, selected: boolean): string =>
-  `<svg viewBox="0 0 30 30" width="100%" height="100%">
-    <circle cx="15" cy="15" r="${selected ? 12.5 : 15}" fill="${colour}"/>
-    ${selected ? `<circle cx="15" cy="15" r="14" fill="none" stroke="${colour}" stroke-width="2"/>` : ''}
-  </svg>`;
+// ── Style tray glyphs ────────────────────────────────────────────────────────────────────────
+//
+// Measured off Desmos's own stylesheet rather than guessed. Three corrections to what the tray
+// used to draw:
+//
+//  - a colour tile is a 30px rounded *square* filled with the colour, not a disc, and the
+//    selected one is marked by a white tick laid over it rather than by a ring;
+//  - the line-style and point-style previews are not drawn in the expression's colour. They are
+//    grey (#949494) and turn the accent blue when selected, so both glyphs use `currentColor`
+//    and let the stylesheet decide.
 
-/** A line-style preview for the style tray: a short rule in the given style. */
-export const lineStyleSwatch = (style: LineStyle, colour: string): string =>
-  `<svg viewBox="0 0 34 16" width="100%" height="100%">
-    <path d="M2 8H32" stroke="${colour}" stroke-width="3" stroke-linecap="round"
-      ${dashPattern(style, 3).length ? `stroke-dasharray="${dashPattern(style, 3).join(' ')}"` : ''}/>
+/** The tick laid over the selected colour tile. White; Desmos darkens it only on pale colours. */
+export const checkIcon = `
+<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.6 4.6L19 7.7"/></svg>`;
+
+/** A line-style preview: a short rule carrying that style's dash pattern. */
+export const lineStyleGlyph = (style: LineStyle): string => {
+  const pattern = dashPattern(style, 2.6);
+  return `<svg viewBox="0 0 24 24" width="100%" height="100%">
+    <path d="M2 12H22" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+      ${pattern.length ? `stroke-dasharray="${pattern.join(' ')}"` : ''}/>
   </svg>`;
+};
+
+/** A point-style preview: the bare marker, no disc behind it. */
+export const pointStyleGlyph = (style: PointStyle): string =>
+  `<svg viewBox="0 0 30 30" width="100%" height="100%">${markerPath(style, 'currentColor', 9.5, 2.8)}</svg>`;
 
 /** The structural-error marker. Numeric errors never show this. */
 export function warnIcon(): string {

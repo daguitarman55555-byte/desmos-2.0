@@ -15,6 +15,8 @@ export const PANEL_MAX_FRACTION = 0.68;
 export interface ShellCallbacks extends ToolbarCallbacks, GraphPaneCallbacks {
   /** Fired when the panel is resized or collapsed, so the canvas can reflow. */
   onLayoutChange(): void;
+  /** The show-keypad button in the panel's bottom-left corner. */
+  onKeypad(): void;
 }
 
 export interface Shell {
@@ -24,6 +26,10 @@ export interface Shell {
   readonly graph: GraphPane;
   /** Where the expression list mounts. */
   readonly listHost: HTMLElement;
+  /** Spans the panel and the graph; the keypad overlays it. */
+  readonly body: HTMLElement;
+  /** Hidden while the keypad is open, since the keypad carries its own minimize tab. */
+  readonly keypadButton: HTMLElement;
 }
 
 export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell {
@@ -59,11 +65,16 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
   footer.innerHTML = 'powered by<span class="pb-word">desmos</span>';
   panel.appendChild(footer);
 
-  const keypad = document.createElement('div');
-  keypad.id = 'keypad-btn';
-  keypad.title = 'Keypad';
-  keypad.innerHTML = keypadIcon + keypadChevronIcon;
-  panel.appendChild(keypad);
+  const keypadButton = document.createElement('div');
+  keypadButton.id = 'keypad-btn';
+  keypadButton.title = 'Keypad';
+  keypadButton.innerHTML = keypadIcon + keypadChevronIcon;
+  keypadButton.addEventListener('mousedown', (ev) => {
+    // The focused math field must keep the caret, so the keypad has something to type into.
+    ev.preventDefault();
+    callbacks.onKeypad();
+  });
+  panel.appendChild(keypadButton);
 
   const toast = document.createElement('div');
   toast.id = 'login-toast';
@@ -114,5 +125,5 @@ export function createShell(root: HTMLElement, callbacks: ShellCallbacks): Shell
     document.body.style.cursor = '';
   });
 
-  return { header, toolbar, panel, graph, listHost };
+  return { header, toolbar, panel, graph, listHost, body, keypadButton };
 }

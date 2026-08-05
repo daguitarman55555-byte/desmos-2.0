@@ -1,7 +1,6 @@
 # Desmos 2.0 — handoff
 
-State as of commit `3135b1d`. Everything committed, working tree clean.
-**138 tests pass, both typechecks clean.**
+Everything committed, working tree clean. **138 tests pass, both typechecks clean.**
 
 ---
 
@@ -40,13 +39,58 @@ DesModder toolbar buttons to be built as if they were Desmos's.
   cannot be pixel-sampled. For canvas sampling use the Chrome tab; DesModder does not alter how
   curves are stroked, so stroke geometry is safe to measure there.
 
-### Two automation techniques that took a while to find
+### How to get numbers out of Desmos — in the order you should try them
+
+**1. Read its stylesheet. This is the best method and it took far too long to find.** Desmos
+serves its CSS same-origin, so `document.styleSheets` is fully readable and every value is
+*exact* rather than measured off a rendered box:
+
+```js
+const rules = [];
+for (const ss of document.styleSheets) for (const r of ss.cssRules) rules.push(r.cssText);
+rules.filter(t => /dcg-color-picker|dcg-keypad-btn/.test(t));
+```
+
+The entire style tray and the entire keypad were specified this way without ever opening either
+of them. Strip the `.dcg-calculator-api-container-v1_13 ` prefix from selectors when reading.
+
+**2. Read its JS bundle** when you need *structure* rather than numbers — which element nests in
+which, how many rows a control has. `fetch()` the `shared_calculator_desktop-*.js` script and
+search it; the templates are readable (`b("div",{class:"dcg-options-menu-section",children:...`).
+That is how the point-style grid was confirmed to be 4×2 and the line/point sections confirmed to
+carry title toggles.
+
+**3. `window.Calc`** for state — `getExpressions()` returns the full style schema,
+`setExpression()` seeds test cases, `Desmos.Colors` / `Desmos.Styles` give the enums.
+
+**4. Live DOM measurement** last, because it needs the workarounds below.
+
+### The Browser pane never composites — and that breaks more than screenshots
+
+`document.hidden` is `true` in the in-app pane, so **`requestAnimationFrame` never fires**. This
+is the single root cause behind the pane's reputation for being unusable on Desmos: the canvas
+stays 0×0, `ResizeObserver` never delivers, and Desmos's expression rows stay as `dcg-shell`
+placeholders forever. Two lines fix it:
+
+```js
+window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 16);
+window.dispatchEvent(new Event('resize'));   // Desmos lays out only on a resize in this pane
+```
+
+With those, rows render as `dcg-mathitem` and everything measures correctly. The same shim is
+needed on **our own app** in the pane, or the graph canvas reports 0×0.
+
+Still impossible in the pane: screenshots. For those, open `http://localhost:<port>` in the
+Chrome tab — DesModder only touches desmos.com, so screenshotting *our* app there is safe.
+
+### Automation limits worth knowing
 
 - **MathQuill will not accept synthetic key events or textarea `input` events.** Drive it with
-  `MathQuill.getInterface(2)(el).typedText('sin(x)')`. This is essential for the keypad work.
-- **Desmos's own state is readable via `window.Calc`** — `getExpressions()` returns the full style
-  schema, `setExpression()` seeds test cases, and `Desmos.Colors` / `Desmos.Styles` give the
-  enums. Far more reliable than scraping the DOM.
+  `MathQuill.getInterface(2)(el).typedText('sin(x)')`.
+- **Desmos's tap layer ignores synthetic pointer events entirely.** Dispatching
+  pointerdown/mousedown on `.dcg-expression-icon-container`, held or not, does nothing at all.
+  This is why the style tray could never be opened under automation — and why method 1 above
+  exists. Do not waste time retrying it.
 
 ---
 
@@ -57,7 +101,7 @@ DesModder toolbar buttons to be built as if they were Desmos's.
 | `core/` | Complete for milestone 1: lang, eval, numerics/roots, poi. Zero DOM, enforced by `tsconfig.core.json` |
 | `graph/` | Complete: transform, viewport, grid, axes, plotters, pick, trace, renderer |
 | `state/` | Complete: document, store, history, selection, persist (serialise only) |
-| `ui/` | Shell, header, toolbar, expression list/row, slider, math field, graph pane, point labels, **settings panel**, **style tray** |
+| `ui/` | Shell, header, toolbar, expression list/row, slider, math field, graph pane, point labels, settings panel, **style tray (geometry now measured)**, **keypad** |
 | Tests | 138, in `tests/` mirroring `src/core/` plus `tests/graph` and `tests/state` |
 
 ### Measured facts now encoded in the code
@@ -83,7 +127,29 @@ Do not re-derive these; they were each measured, several contradict the obvious 
 - **The grid block's columns are Grid+Arrows (left, full size) and Axis Numbers+Minor Gridlines
   (right, 13.6px small).** Pairing them any other way makes "Minor Gridlines" wrap.
 - **Graph tool buttons are 37×37 at a 5px inset.**
-- **Panel is 448px**; default range is exactly x ∈ [−10, 10].
+- Default range is exactly x ∈ [−10, 10].
+- **Style tray**: 220px min-width, 10px vertical padding, sections fenced by the same 1px `#e2e2e2`
+  rule as the settings panel. Colours are a **six-column grid of 30px rounded squares** (4px gap,
+  3px radius) — *not* discs and not one flat row — and the selected one is marked by a **white
+  tick over the tile**, not a ring. Line styles are 33×30 segmented buttons, point styles a 4×2
+  grid of 28×28. Both are the **"mini" theme**: `#bbb` borders and an accent-tinted selection,
+  *not* the settings panel's dark grey. The previews are `#949494`, never the expression's colour.
+- **Keypad**: an 835px-max well, 4 rows of 40px, `4px 3px` padding, `#f0f0f0` on a
+  `rgba(0,0,0,.1)` top border. **Each row is eleven units**: an ordinary key takes one, the gaps
+  between key groups take a half, `functions` and `enter` take two, `backspace` takes one and a
+  half, and row 3's second gap takes a whole one. Every row sums to eleven, which is what keeps
+  the columns aligned. Counterintuitively **the digits are the darker keys and the operators are
+  white** — check a screenshot before "fixing" that.
+
+### One measured fact that is now in doubt
+
+**`--panel-width: 448px` did not reproduce.** Live Desmos, extension-free, at both 800px and
+1440px viewport widths, reads `.dcg-exppanel-outer` = 416px wide with `.dcg-grapher` starting at
+x=416. That is a flat contradiction of the 448 currently encoded in `tokens.css` and asserted
+above. It was left alone rather than changed, because it moves the whole layout and the earlier
+measurement may have been taken under conditions I could not reproduce (browser zoom is the
+obvious suspect, though 448/416 = 1.077 is not a clean ratio). **Resolve this before trusting any
+panel-relative metric.**
 
 All pixel values live in `src/styles/tokens.css`. Components must never hardcode one.
 
@@ -91,17 +157,25 @@ All pixel values live in `src/styles/tokens.css`. Components must never hardcode
 
 ## Next up, in the order I would take them
 
-### 1. Re-measure the style tray's geometry
-`src/ui/StyleMenu.ts` is built and works, but its **spacing is the one thing in the project that
-was not measured** — Desmos only opens its tray on a real long press, which the automation could
-not drive. Open it by hand, measure, and retune the `--sty-*` tokens.
+### 1. Settle the panel width
+See the doubt raised above. Everything else is downstream of it.
 
-### 2. The keypad
-`src/ui/Keypad.ts` is still a stub; the button exists and does nothing. Desmos's keypad buttons are
-already in its DOM at load (`.dcg-keypad-btn`, 71×36) even while hidden, so the layout can be read
-straight off without opening it. Route presses through `MathField`'s `typedText`/`cmd`.
+### 2. Finish the style tray's two missing sections
+The geometry is now exact, but Desmos titles the last two sections **"Lines"** and **"Points"**
+and puts a **visibility toggle** in each title. Neither is built, because the document model has
+no per-lines/per-points visibility and an inert toggle would be a control that lies. Add
+`lines: boolean` and `points: boolean` to `Expression`, honour them in `drawables()`, then the
+titles and toggles can go in. Desmos also puts opacity and width/size math fields down the left
+of each of those sections — same gate, they need `lineOpacity`/`lineWidth`/`pointSize` wired
+through the renderer.
 
-### 3. Missing wrench controls
+### 3. The keypad's two remaining panels
+`functions` and `ABC` render **disabled**, alongside `Audio` which Desmos disables too. Each
+opens a further panel that does not exist yet: `functions` is a popover of trig/stats/list
+commands, `ABC` swaps the whole well for a letters keypad. Both are additive — the key table in
+`Keypad.ts` is plain data and a new panel is a new module, not a rewrite.
+
+### 4. Missing wrench controls
 Visible in the user's screenshot, not yet built: **One Quadrant**, **Zoom Square**, the
 display-size segmented control, and the grid-style icon pair that sits inside the Grid block
 between the Grid and Arrows checkboxes (`.dcg-circle-icon-group.dcg-grid-group`, 86×32).
@@ -119,6 +193,11 @@ shipping a control that lies.
 
 ## Landmines
 
+- **MathQuill's `keystroke('Enter')` silently does nothing.** It never reaches MathQuill's own
+  `enter` handler — no throw, no effect, and it looks like it ought to work. The keypad's Enter
+  key is therefore a *document* action (`KeyBinding.on === 'document'`), routed through
+  `main.ts` to `store.insertAfter`, not a field keystroke. `Left`, `Right` and `Backspace` go
+  through `keystroke` and are fine; only `Enter` is broken. Do not "simplify" that asymmetry away.
 - **`core/` must contain zero DOM references.** `npm run typecheck` runs `tsconfig.core.json`,
   which compiles `core/` with the DOM libs stripped, so a violation is a build error. Do not "fix"
   it by adding `"DOM"` to that config.

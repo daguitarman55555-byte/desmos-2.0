@@ -44,6 +44,14 @@ export interface MathField {
   blur(): void;
   moveToRightEnd(): void;
   el(): HTMLElement;
+  /** Insert a command by name — `^`, `/`, `\sqrt` — building the structure around the caret. */
+  cmd(command: string): void;
+  /** Insert literal latex at the caret without interpreting it as a command. */
+  write(latex: string): void;
+  /** Type characters as if from the keyboard, so autoCommands and autoOperatorNames apply. */
+  typedText(text: string): void;
+  /** Send a key by name: `Left`, `Right`, `Backspace`, `Enter`. Fires the handlers. */
+  keystroke(keys: string): void;
 }
 
 interface MQInterface {
@@ -89,6 +97,45 @@ export interface MathFieldHandle {
   setLatexQuietly(latex: string): void;
   getLatex(): string;
   focus(toEnd: boolean): void;
+}
+
+/**
+ * What a keypad key does to the focused field.
+ *
+ * A tagged union rather than a callback so the key table stays plain data — it can be read,
+ * tested and diffed against Desmos's own `dcg-command` attributes without running the UI.
+ */
+export type KeyAction =
+  | { readonly kind: 'type'; readonly text: string }
+  | { readonly kind: 'cmd'; readonly command: string }
+  | { readonly kind: 'write'; readonly latex: string }
+  | { readonly kind: 'key'; readonly keys: string }
+  /** Several of the above in order — `a²` is a `^` followed by a `2` and a step back out. */
+  | { readonly kind: 'sequence'; readonly steps: readonly KeyAction[] };
+
+/** Apply a key action to a field. Exported so the keypad has no MathQuill knowledge of its own. */
+export function applyKeyAction(field: MathField, action: KeyAction): void {
+  switch (action.kind) {
+    case 'type':
+      field.typedText(action.text);
+      return;
+    case 'cmd':
+      field.cmd(action.command);
+      return;
+    case 'write':
+      field.write(action.latex);
+      return;
+    case 'key':
+      field.keystroke(action.keys);
+      return;
+    case 'sequence':
+      for (const step of action.steps) applyKeyAction(field, step);
+      return;
+    default: {
+      const never: never = action;
+      return never;
+    }
+  }
 }
 
 export function createMathField(host: HTMLElement, handlers: MathFieldHandlers): MathFieldHandle {

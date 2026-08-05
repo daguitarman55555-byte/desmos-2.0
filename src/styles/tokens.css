@@ -173,6 +173,51 @@
   --keypad-width: 68px;
   --keypad-height: 38.4px;
   --keypad-gap: 5.6px;
+
+  /* ── The keypad itself ────────────────────────────────────────────────
+   * Measured on live desmos.com in an extension-free browser. Desmos builds the keypad into the
+   * DOM at load even while it is closed, so the whole layout could be read without opening it.
+   * Selectors: .dcg-keys, .dcg-basic-keypad, .dcg-keypad-row, .dcg-keypad-btn-container,
+   * .dcg-btn-light-on-gray, .dcg-btn-dark-on-gray, .dcg-minimize-keypad.
+   */
+  --kp-max-width: 835px;
+  --kp-well-pad: 4px 3px;
+  --kp-row-height: 40px;
+  /* Each key is inset inside its slot, which is where the gutter between keys comes from. */
+  --kp-btn-inset: 2px;
+  --kp-btn-radius: 2px;
+  --kp-font-scale: 110%;
+  --kp-content-scale: 90%;
+  --kp-icon-size: 20px;
+
+  --kp-bg: #f0f0f0;
+  --kp-border: rgba(0, 0, 0, 0.1);
+  --kp-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.1);
+  /* The inset highlight and shade every key carries. */
+  --kp-btn-emboss: inset 0 1px rgba(255, 255, 255, 0.25), inset 0 -1px rgba(0, 0, 0, 0.02);
+
+  /* Counterintuitive but measured: the digits are the darker keys, the operators are white. */
+  --kp-light-bg: linear-gradient(#fff, #fafafa);
+  --kp-light-border: #d8d8d8;
+  --kp-light-hover-bg: #f5f5f5;
+  --kp-light-active-bg: #ebebeb;
+  --kp-light-active-border: #cfcfcf;
+
+  --kp-dark-bg: linear-gradient(rgba(0, 0, 0, 0.13), rgba(0, 0, 0, 0.16));
+  --kp-dark-border: #bbb;
+  --kp-dark-hover-bg: rgba(0, 0, 0, 0.16);
+  --kp-dark-active-bg: rgba(0, 0, 0, 0.19);
+  --kp-dark-emboss: inset 0 1px rgba(255, 255, 255, 0.1), inset 0 -1px rgba(0, 0, 0, 0.02);
+
+  --kp-blue-hover: #2457a8;
+  --kp-blue-active: #193d75;
+  --kp-blue-radius: 3px;
+
+  /* The tab that rides above the top-left corner of the well. */
+  --kp-min-top: -2.5rem;
+  --kp-min-pad: 0.25rem 1.25rem;
+  --kp-min-radius: 5px;
+  --kp-min-text: rgba(0, 0, 0, 0.7);
   --toast-bottom: 52.8px;
   --toast-width: 269.6px;
   --toast-inset: 19.2px;
@@ -223,11 +268,41 @@
   --settings-step-w: 36px;
 
   /* ── Style tray (long-press the expression disc) ──────────────────────
-   * The palette and styles are measured; this tray's own spacing is not — see StyleMenu.ts. */
-  --sty-pad: 8px;
-  --sty-gap: 6px;
-  --sty-swatch: 29px;
-  --sty-line-w: 40px;
+   * Now measured. Desmos will not open this tray under automation, so the values were read
+   * straight out of its own stylesheet in an extension-free browser instead of off a capture —
+   * exact rather than approximate. Selectors, for the record: .dcg-expressions-options-menu,
+   * .dcg-options-menu-section, .dcg-color-picker-menu, .dcg-color-swatch,
+   * .dcg-line-segmented-option, .dcg-options--point-styles.
+   */
+  --sty-min-width: 220px;
+  --sty-pad-y: 10px;
+  --sty-pad-x: 10px;
+  --sty-section-gap: 10px;
+
+  /* Colours are a six-column grid of 30px rounded squares — not discs, and not one flat row. */
+  --sty-swatch: 30px;
+  --sty-swatch-radius: 3px;
+  --sty-grid-gap: 4px;
+  --sty-grid-cols: 6;
+  /* Rings Desmos draws on hover and on press. */
+  --sty-swatch-hover: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  --sty-swatch-active: 0 0 0 2px rgba(0, 0, 0, 0.2);
+  --sty-check: 20px;
+
+  /* Line and point styles are segmented controls, in the "mini" theme: hairline borders that
+   * collapse into each other, and an accent-tinted fill when selected — not the settings
+   * panel's dark grey. */
+  --sty-seg-w: 33px;
+  --sty-seg-h: 30px;
+  --sty-point-btn: 28px;
+  --sty-point-cols: 4;
+  --sty-seg-border: #bbb;
+  --sty-seg-radius: 3px;
+  --sty-seg-ink: #949494;
+  --sty-seg-ink-hover: #666;
+  --sty-seg-selected-bg: rgba(47, 114, 220, 0.25);
+  --sty-line-icon: 20.8px;
+  --sty-point-icon: 24px;
 
   /* ── Graph ───────────────────────────────────────────────────────────── */
   /* Measured: the pillbox sits 5px from the top and right of the graph pane, and each

@@ -183,36 +183,216 @@
 .set-range .set-bound.set-mathfield { flex: 1 1 0; min-width: 0; justify-content: center; }
 .set-stepfield { width: var(--settings-step-w); flex: 0 0 var(--settings-step-w); }
 
-/* ===================== STYLE TRAY ===================== */
+/* ===================== KEYPAD =====================
+ * Measured on live desmos.com; see the --kp-* block in tokens.css for the selectors.
+ *
+ * The keypad overlays the whole body rather than displacing it, so opening it never reflows the
+ * graph. Only the well itself takes pointer events; the rest of the overlay is transparent to
+ * the mouse, which is what lets the graph stay draggable above an open keypad.
+ */
+
+.kp {
+  position: absolute; inset: 0;
+  overflow: hidden; pointer-events: none;
+  z-index: 10;
+}
+.kp[hidden] { display: none; }
+.kp > * { pointer-events: auto; }
+
+.kp-container { position: absolute; bottom: 0; left: 0; right: 0; }
+
+.kp-bg {
+  background: var(--kp-bg);
+  border-top: 1px solid var(--kp-border);
+  box-shadow: var(--kp-shadow);
+}
+
+/* Positioned so the minimize tab can hang off its top-left corner. */
+.kp-keys {
+  position: relative;
+  width: 100%; max-width: var(--kp-max-width);
+  margin: auto;
+  text-align: center;
+  font-size: var(--kp-font-scale);
+}
+
+.kp-basic { padding: var(--kp-well-pad); }
+
+/* Eleven units to a row. A slot's flex-grow carries its unit count, so the columns line up down
+ * the keypad even though the rows group their keys differently. */
+.kp-row { display: flex; height: var(--kp-row-height); }
+.kp-slot { flex-basis: 0; position: relative; }
+.kp-slot.kp-disabled { opacity: 0.5; }
+
+/* The key floats inside its slot; the inset is the whole of the gutter between neighbours. */
+.kp-btn {
+  position: absolute; inset: var(--kp-btn-inset);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  font-family: var(--font-math);
+  font-size: var(--kp-content-scale);
+  cursor: pointer;
+  border-radius: var(--kp-btn-radius);
+}
+.kp-btn:disabled { cursor: default; pointer-events: none; }
+.kp-btn:focus-visible { outline: 2px solid var(--c-blue); outline-offset: -2px; }
+
+.kp-btn-content {
+  flex: 1 1 0;
+  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.kp-btn-content svg { display: block; width: var(--kp-icon-size); height: var(--kp-icon-size); }
+.kp-btn-content i { font-style: italic; }
+/* Exponents sit tight against their base, as they do in a rendered expression. */
+.kp-btn-content sup { font-size: 70%; vertical-align: super; line-height: 0; }
+
+.kp-btn-light {
+  background: var(--kp-light-bg);
+  border: 1px solid var(--kp-light-border);
+  box-shadow: var(--kp-btn-emboss);
+  color: var(--c-text);
+}
+.kp-btn-light:not(:disabled):hover { background: var(--kp-light-hover-bg); }
+.kp-btn-light:not(:disabled):active {
+  background: var(--kp-light-active-bg);
+  border-color: var(--kp-light-active-border);
+  box-shadow: none;
+}
+
+.kp-btn-dark {
+  background: var(--kp-dark-bg);
+  border: 1px solid var(--kp-dark-border);
+  box-shadow: var(--kp-dark-emboss);
+  color: var(--c-text);
+}
+.kp-btn-dark:not(:disabled):hover { background: var(--kp-dark-hover-bg); }
+.kp-btn-dark:not(:disabled):active { background: var(--kp-dark-active-bg); box-shadow: none; }
+
+.kp-btn-blue {
+  background: var(--c-blue);
+  border: 1px solid transparent;
+  border-radius: var(--kp-blue-radius);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.1), inset 0 -1px rgba(0, 0, 0, 0.04);
+  color: var(--c-chrome-text);
+}
+.kp-btn-blue:not(:disabled):hover { background: var(--kp-blue-hover); }
+.kp-btn-blue:not(:disabled):active { background: var(--kp-blue-active); box-shadow: none; }
+
+/* The `functions` and `ABC` keys are words, not maths, so they take the UI face. */
+.kp-btn[data-command='functions'] .kp-btn-content,
+.kp-btn[data-command='ABC'] .kp-btn-content { font-family: var(--font-ui); }
+
+/* ---- the minimize tab ---- */
+.kp-minimise-host { position: absolute; top: var(--kp-min-top); left: -1px; }
+.kp-minimise {
+  display: flex; align-items: center; gap: var(--keypad-gap);
+  padding: var(--kp-min-pad);
+  background: var(--kp-bg);
+  color: var(--kp-min-text);
+  border: 0;
+  border-bottom: 1px solid var(--kp-bg);
+  border-radius: var(--kp-min-radius) var(--kp-min-radius) 0 0;
+  box-shadow: var(--kp-shadow);
+  cursor: pointer;
+}
+.kp-caret-down { display: flex; transform: rotate(180deg); }
+
+/* ===================== STYLE TRAY =====================
+ * Geometry read out of Desmos's own stylesheet in an extension-free browser — see the --sty-*
+ * block in tokens.css for the selectors. The tray is a 220px popover padded 10px vertically,
+ * whose sections are fenced by the same hairline rule as the settings panel.
+ *
+ * Not built, and deliberately so: Desmos titles the last two sections "Lines" and "Points" and
+ * puts a visibility toggle in each title. We have no per-lines/per-points visibility in the
+ * document model, so the toggle would be a control that lies. The titles go in with it.
+ */
 
 .sty-menu {
-  padding: var(--sty-pad);
-  display: flex; flex-direction: column; gap: var(--sty-gap);
-  width: max-content;
+  min-width: var(--sty-min-width);
+  padding: var(--sty-pad-y) 0;
 }
 
-.sty-row { display: flex; gap: var(--sty-gap); align-items: center; }
-.sty-row[hidden] { display: none; }
-.sty-points { flex-wrap: wrap; max-width: calc(4 * (var(--sty-swatch) + var(--sty-gap))); }
+.sty-section { padding: 0 var(--sty-pad-x); }
+.sty-section[hidden] { display: none; }
+.sty-section + .sty-section:not([hidden]) {
+  margin-top: var(--sty-section-gap);
+  padding-top: var(--sty-section-gap);
+  border-top: 1px solid var(--settings-divider);
+}
 
-.sty-swatch {
+/* ---- colours: a six-column grid of rounded squares ---- */
+.sty-colours {
+  display: grid;
+  grid-template-columns: repeat(var(--sty-grid-cols), var(--sty-swatch));
+  grid-auto-rows: var(--sty-swatch);
+  gap: var(--sty-grid-gap);
+}
+.sty-tile {
   width: var(--sty-swatch); height: var(--sty-swatch);
+  padding: 0; border: 0; cursor: pointer;
+  border-radius: var(--sty-swatch-radius);
+  position: relative;
+}
+.sty-tile:hover { box-shadow: var(--sty-swatch-hover); }
+.sty-tile:active { box-shadow: var(--sty-swatch-active); }
+.sty-tile:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 1px; }
+/* The tick is centred over the tile and never intercepts the press. */
+.sty-tile svg {
+  display: block; pointer-events: none;
+  position: absolute; left: 0; right: 0;
+  top: 50%; margin-top: calc(var(--sty-check) / -2);
+  height: var(--sty-check); width: 100%;
+}
+
+/* ---- line and point styles: segmented controls ----
+ * The -1px margins collapse each pair of adjacent borders into a single hairline, and only the
+ * outermost corners are rounded. Same construction as the settings panel's control, but the
+ * mini theme: #bbb borders and an accent-tinted selection rather than dark grey.
+ */
+.sty-seg { display: flex; padding: 0 1px 1px 0; }
+.sty-seg-btn {
+  width: var(--sty-seg-w); height: var(--sty-seg-h);
   flex: 0 0 auto;
-  padding: 0; border: 0; background: none; cursor: pointer;
-  border-radius: 50%;
+  margin: 0 -1px -1px 0;
+  padding: 0;
+  border: 1px solid var(--sty-seg-border);
+  background: transparent;
+  color: var(--sty-seg-ink);
+  cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.sty-swatch:hover { background: var(--c-hover); }
-.sty-swatch svg { display: block; width: 100%; height: 100%; }
+.sty-seg-btn:hover:not(.selected) {
+  color: var(--sty-seg-ink-hover);
+  background: rgba(0, 0, 0, 0.04);
+}
+.sty-seg-btn:active:not(.selected) { background: rgba(0, 0, 0, 0.2); }
+.sty-seg-btn.selected {
+  background: var(--sty-seg-selected-bg);
+  border-color: var(--c-blue);
+  color: var(--c-blue);
+  cursor: default;
+}
+.sty-seg-btn:focus-visible { outline: 2px solid var(--c-blue); outline-offset: 1px; }
+.sty-seg-btn svg { display: block; }
 
-/* Line-style previews are wider than they are tall, so they get a pill rather than a disc. */
-.sty-line {
-  width: var(--sty-line-w);
-  border-radius: var(--radius-sm);
+.sty-lines .sty-seg-btn svg { width: var(--sty-line-icon); height: var(--sty-line-icon); }
+
+/* Eight point styles wrap to a 4x2 grid, so the rounded corners are the grid's, not the row's. */
+.sty-points {
+  display: grid;
+  grid-template-columns: repeat(var(--sty-point-cols), var(--sty-point-btn));
+  /* 1px on the right and bottom recovers the space the collapsing margins take back. */
+  padding: 0 1px calc(5px + 1px) 0;
 }
-.sty-line.selected,
-.sty-points .sty-swatch.selected {
-  background: var(--c-hover);
-  outline: 2px solid var(--c-blue);
-  outline-offset: -2px;
-}
+.sty-points .sty-seg-btn { width: var(--sty-point-btn); height: var(--sty-point-btn); }
+.sty-points .sty-seg-btn svg { width: var(--sty-point-icon); height: var(--sty-point-icon); }
+
+/* Corner rounding. A single row rounds its two ends; the point grid rounds its four corners. */
+.sty-seg .sty-seg-btn:first-child { border-radius: var(--sty-seg-radius) 0 0 var(--sty-seg-radius); }
+.sty-seg .sty-seg-btn:last-child { border-radius: 0 var(--sty-seg-radius) var(--sty-seg-radius) 0; }
+.sty-points .sty-seg-btn:nth-child(1) { border-radius: var(--sty-seg-radius) 0 0 0; }
+.sty-points .sty-seg-btn:nth-child(4) { border-radius: 0 var(--sty-seg-radius) 0 0; }
+.sty-points .sty-seg-btn:nth-child(5) { border-radius: 0 0 0 var(--sty-seg-radius); }
+.sty-points .sty-seg-btn:nth-child(8) { border-radius: 0 0 var(--sty-seg-radius) 0; }

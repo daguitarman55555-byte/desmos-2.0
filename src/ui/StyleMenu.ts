@@ -4,12 +4,21 @@
 // gestures live on the same element, which is why ExpressionRow distinguishes them by how long
 // the button is held rather than by which control was hit.
 //
-// The palette and the style enums are measured — see state/document.ts. What is *not* measured is
-// this tray's own spacing: Desmos's tray only opens on a real long press, which the automation
-// available here could not drive, so the geometry below is built from the shared popover shell
-// and the known 29px disc rather than from a capture. Worth re-measuring by hand.
+// The geometry is measured. Desmos will not open its tray under automation — its tap layer
+// ignores synthetic pointer events — so rather than eyeball it, the values were read straight
+// out of Desmos's own stylesheet in an extension-free browser. That is exact rather than
+// approximate, and it turned up three things the previous guess had wrong:
+//
+//  1. colours are a six-column grid of 30px rounded squares, not one flat row of discs;
+//  2. selection is a white tick over the tile, not a ring around it;
+//  3. the line and point previews are grey (#949494) and turn accent blue when selected — they
+//     are never drawn in the expression's own colour.
+//
+// Line and point styles are segmented controls built the same way as the settings panel's, but
+// in Desmos's "mini" theme. See the --sty-* block in tokens.css for the selectors each value
+// came from.
 
-import { colourSwatch, lineStyleSwatch, pointIcon } from './icons.ts';
+import { checkIcon, lineStyleGlyph, pointStyleGlyph } from './icons.ts';
 import { LINE_STYLES, PALETTE, POINT_STYLES } from '../state/document.ts';
 import type { Expression, LineStyle, PointStyle } from '../state/document.ts';
 
@@ -31,12 +40,14 @@ export interface StyleMenu {
   update(expression: Expression): void;
 }
 
-function swatchButton(title: string, html: string, onClick: () => void): HTMLButtonElement {
+/** Gap between the disc and the tray, in css pixels. */
+const ANCHOR_GAP = 6;
+
+function trayButton(className: string, title: string, onClick: () => void): HTMLButtonElement {
   const b = document.createElement('button');
   b.type = 'button';
-  b.className = 'sty-swatch';
+  b.className = className;
   b.title = title;
-  b.innerHTML = html;
   // mousedown, not click: the row's own mousedown handler would otherwise steal focus first.
   b.addEventListener('mousedown', (ev) => {
     ev.preventDefault();
@@ -53,51 +64,57 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
   element.className = 'popover sty-menu';
   element.hidden = true;
 
-  const colourRow = document.createElement('div');
-  colourRow.className = 'sty-row sty-colours';
+  const colourSection = document.createElement('div');
+  colourSection.className = 'sty-section';
+  const colourGrid = document.createElement('div');
+  colourGrid.className = 'sty-colours';
+  colourSection.appendChild(colourGrid);
+
+  const lineSection = document.createElement('div');
+  lineSection.className = 'sty-section';
   const lineRow = document.createElement('div');
-  lineRow.className = 'sty-row sty-lines';
-  const pointRow = document.createElement('div');
-  pointRow.className = 'sty-row sty-points';
-  element.append(colourRow, lineRow, pointRow);
+  lineRow.className = 'sty-seg sty-lines';
+  lineSection.appendChild(lineRow);
+
+  const pointSection = document.createElement('div');
+  pointSection.className = 'sty-section';
+  const pointGrid = document.createElement('div');
+  pointGrid.className = 'sty-points';
+  pointSection.appendChild(pointGrid);
+
+  element.append(colourSection, lineSection, pointSection);
 
   let target: Expression | null = null;
   let open = false;
   let showPoints = false;
 
   const render = (expression: Expression): void => {
-    const colour = expression.colour ?? '#000';
+    const colour = (expression.colour ?? '#000').toLowerCase();
 
-    colourRow.innerHTML = '';
+    colourGrid.innerHTML = '';
     for (const [name, value] of Object.entries(PALETTE)) {
-      colourRow.appendChild(
-        swatchButton(
-          titleCase(name),
-          colourSwatch(value, value.toLowerCase() === colour.toLowerCase()),
-          () => callbacks.onColour(value),
-        ),
-      );
+      const b = trayButton('sty-tile', titleCase(name), () => callbacks.onColour(value));
+      b.style.background = value;
+      if (value.toLowerCase() === colour) b.innerHTML = checkIcon;
+      colourGrid.appendChild(b);
     }
 
     lineRow.innerHTML = '';
     for (const style of LINE_STYLES) {
-      const b = swatchButton(titleCase(style), lineStyleSwatch(style, colour), () =>
-        callbacks.onLineStyle(style),
-      );
-      b.classList.add('sty-line');
+      const b = trayButton('sty-seg-btn', titleCase(style), () => callbacks.onLineStyle(style));
+      b.innerHTML = lineStyleGlyph(style);
       b.classList.toggle('selected', expression.lineStyle === style);
       lineRow.appendChild(b);
     }
 
-    pointRow.hidden = !showPoints;
-    pointRow.innerHTML = '';
+    pointSection.hidden = !showPoints;
+    pointGrid.innerHTML = '';
     if (showPoints) {
       for (const style of POINT_STYLES) {
-        const b = swatchButton(titleCase(style), pointIcon(colour, true, style), () =>
-          callbacks.onPointStyle(style),
-        );
+        const b = trayButton('sty-seg-btn', titleCase(style), () => callbacks.onPointStyle(style));
+        b.innerHTML = pointStyleGlyph(style);
         b.classList.toggle('selected', expression.pointStyle === style);
-        pointRow.appendChild(b);
+        pointGrid.appendChild(b);
       }
     }
   };
@@ -123,7 +140,7 @@ export function createStyleMenu(callbacks: StyleMenuCallbacks): StyleMenu {
       if (parent) {
         const a = anchor.getBoundingClientRect();
         const p = parent.getBoundingClientRect();
-        element.style.left = `${a.right - p.left + 6}px`;
+        element.style.left = `${a.right - p.left + ANCHOR_GAP}px`;
         element.style.top = `${a.top - p.top}px`;
       }
     },
