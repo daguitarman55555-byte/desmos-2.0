@@ -1,0 +1,75 @@
+name: Live Calculator Preview
+
+on:
+  push:
+    branches: [preview]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: neural-lab-graph-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out preview code
+        uses: actions/checkout@v4
+        with:
+          ref: preview
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate types
+        run: npm run typecheck
+
+      - name: Run regression tests
+        run: npm test
+
+      - name: Build calculator for GitHub Pages
+        run: npx vite build --base=/desmos-2.0/
+
+      - name: Save downloadable preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: neural-lab-graph-preview
+          path: dist/
+          retention-days: 14
+
+      - name: Package GitHub Pages site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/
+
+  deploy:
+    name: Publish live preview
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check GitHub Pages configuration
+        uses: actions/configure-pages@v5
+
+      - name: Deploy calculator
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Add one-click link to run summary
+        run: |
+          echo "### [Open Neural Lab Graph preview](${{ steps.deployment.outputs.page_url }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "Built from the preview branch." >> "$GITHUB_STEP_SUMMARY"
