@@ -74,13 +74,10 @@ describe('undefinedVariables', () => {
     expect(missing('y=m\\cdot\\sin\\left(bx+c\\right)+d')).toEqual(['m', 'b', 'c', 'd']);
   });
 
-  // Pinned as a known limitation, not as desired behaviour. `latexToSource` flattens `\sin` to
-  // `sin`, so `a\sin(x)` becomes the string `asin(x)`, which the tokenizer longest-matches as
-  // arcsine — and the coefficient `a` vanishes. The same trap exists for `a\cos` and `a\tan`.
-  // Fixing it means teaching latexToSource to keep function-name boundaries; until then this
-  // test documents what actually happens so the loss is visible rather than surprising.
-  it('KNOWN BUG: a coefficient is swallowed by asin/acos/atan', () => {
-    expect(missing('y=a\\sin\\left(bx\\right)')).toEqual(['b']);
-    expect(missing('y=a\\cos\\left(bx\\right)')).toEqual(['b']);
+  it('offers coefficient sliders rather than swallowing them as inverse trig', () => {
+    expect(missing('y=a\\sin\\left(bx\\right)')).toEqual(['a', 'b']);
+    expect(missing('y=a\\cos\\left(bx\\right)')).toEqual(['a', 'b']);
+    expect(missing('y=a\\tan\\left(bx\\right)')).toEqual(['a', 'b']);
+    expect(missing('y=5x\\sin\\left(x\\right)')).toEqual([]);
   });
 });
