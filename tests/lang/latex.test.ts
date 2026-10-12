@@ -64,6 +64,25 @@ describe('latexToSource', () => {
     expect(latexToSource('\\frac{\\sqrt{x}}{\\pi}')).toBe('((sqrt(x))/(pi))');
   });
 
+
+
+  it('preserves coefficient boundaries before TeX functions', () => {
+    expect(latexToSource('y=a\\\\sin\\\\left(bx\\\\right)')).toBe('y=a*sin(bx)');
+    expect(latexToSource('y=5x\\\\sin\\\\left(x\\\\right)')).toBe('y=5x*sin(x)');
+    expect(latexToSource('y=a\\\\cos(x)+b\\\\tan(x)')).toBe('y=a*cos(x)+b*tan(x)');
+    expect(latexToSource('y=a\\\\arcsin(x)')).toBe('y=a*arcsin(x)');
+  });
+
+  it('preserves a built-in written as a MathQuill operatorname', () => {
+    expect(latexToSource('a\\\\operatorname{sin}\\\\left(x\\\\right)')).toBe('a*sin(x)');
+    expect(latexToSource('\\\\operatorname{sin}\\\\left(x\\\\right)')).toBe('sin(x)');
+    expect(latexToSource('a\\\\operatorname{mystery}')).toBe('amystery');
+  });
+
+  it('preserves coefficients inside recursively parsed fractions', () => {
+    expect(latexToSource('\\\\frac{a\\\\sin(x)}{2}')).toBe('((a*sin(x))/(2))');
+  });
+
   it('handles a realistic MathQuill payload end to end', () => {
     const tex = '\\frac{\\operatorname{sin}\\left(x\\right)}{x^{2}+1}';
     expect(latexToSource(tex)).toBe('((sin(x))/(x^(2)+1))');

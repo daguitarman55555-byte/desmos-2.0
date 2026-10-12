@@ -1,9 +1,12 @@
+import { BUILTIN_NAMES } from './ast.ts';
+
 // LaTeX <-> plain source, both directions.
 //
 // MathQuill owns the LaTeX; everything below this line works on plain source. The conversion is
 // deliberately lossy and shallow — it handles the constructs MathQuill actually emits for the
 // input the calculator accepts, and lets anything else fall through as literal characters, where
 // the tokenizer will reject it and the row gets a warning triangle.
+// Built-in function commands preserve lexical boundaries when next to coefficients.
 
 /**
  * Read a brace group starting at `i`, which must index a `{`.
@@ -40,7 +43,7 @@ export function latexToSource(tex: string): string {
     .replace(/\\cdot|\\times/g, '*')
     .replace(/\\div/g, '/')
     .replace(/\\ /g, '')
-    .replace(/\\operatorname\{([A-Za-z]+)\}/g, '$1')
+    .replace(/\\operatorname\{([A-Za-z]+)\}/g, (_match, name: string) => '\\' + name)
     .replace(/\\pi/g, 'pi')
     .replace(/\\tau/g, 'tau')
     .replace(/\\theta/g, 'theta');
@@ -85,7 +88,14 @@ export function latexToSource(tex: string): string {
       // Unknown command: drop the backslash, keep the letters.
       let j = i + 1;
       while (j < s.length && /[A-Za-z]/.test(s[j] as string)) j++;
-      out += s.slice(i + 1, j);
+      const command = s.slice(i + 1, j);
+      // Preserve the boundary between a coefficient and a TeX function command.
+      // Without it, a\\sin(x) collapses to asin(x), changing multiplication to arcsine.
+      // Only known function commands need the separator; unknown-command behavior is unchanged.
+      if (BUILTIN_NAMES.has(command.toLowerCase()) && /[A-Za-z0-9_)\]]$/.test(out)) {
+        out += '*';
+      }
+      out += command;
       i = j;
       continue;
     }

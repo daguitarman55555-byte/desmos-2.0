@@ -269,11 +269,12 @@ Do not build them and do not re-add them to this list.
 
 ## Landmines
 
-- **`a\sin(x)` is silently read as `arcsin(x)`.** `latexToSource` flattens `\sin` to `sin`, so
-  the coefficient and the function name run together into a string the tokenizer longest-matches
-  as a builtin — and the `a` disappears from the expression entirely. Same for `a\cos` and
-  `a\tan`. Pinned in `tests/lang/undefined-variables.test.ts` as a known bug so the loss is
-  visible; fixing it means teaching `latexToSource` to keep function-name boundaries.
+- **Fixed: MathQuill TeX function boundaries.** The plain-source converter now inserts
+  multiplication between immediately adjacent coefficients and TeX built-in functions,
+  including `a\\sin(x)`, `5x\\sin(x)`, and `a\\operatorname{sin}(x)`.
+  The source tokenizer's ordinary `asin(x)` spelling still means inverse sine.
+  Covered by `tests/lang/latex.test.ts` and `tests/lang/undefined-variables.test.ts`.
+
 - **A blank document showing one row is correct.** An earlier note here claimed Desmos shows
   rows 1 *and* 2 on a blank document and that `ensureTrailingBlank()` needed fixing. It does not:
   live Desmos renders exactly one row when empty, and `expressions + 1` once anything is typed,
